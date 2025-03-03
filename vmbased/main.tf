@@ -15,8 +15,6 @@
 
 ##
 
-// create mysql database and server in 1 region that spans both private db subnets
-
 // adjust app gateway
 
 // download ecommerce website and host it
@@ -28,9 +26,9 @@
 ## !!! add route table in public subnets with hop type as "internet"
 
 ## try using redis cache for database
-## try creating a new subscription before making a flexible mysql server/database
 
-## abandon mysql entirely, use different database
+
+## Ensure that the NSG for the Bastion subnet allows inbound connections on port 3389 for RDP and 22 for SSH. !!!
 
 
 locals {
@@ -120,7 +118,7 @@ resource "azurerm_virtual_network" "vnet" {
 }
 
 
-#----------------------- all private subnets ------------------------#
+#----------------------------------- all private subnets ------------------------------------#
 
 // create private subnets for the linux virtual machines
 resource "azurerm_subnet" "vm_subnets" {
@@ -155,7 +153,7 @@ resource "azurerm_subnet" "db_subnets" {
 }
 
 
-#----------------------- all public subnets & nat gateway------------------------#
+#------------------------------------ all public subnets -------------------------------------#
 
 // public subnet for azure bastion
 resource "azurerm_subnet" "bastion_subnet" {
@@ -167,9 +165,23 @@ resource "azurerm_subnet" "bastion_subnet" {
   depends_on = [ azurerm_virtual_network.vnet ]
 }
 
-// nat gateway for bastion subnet
+// public subnet for application gateway
+resource "azurerm_subnet" "agw_subnet" {
+  name = local.public_subnets[1].name
+  resource_group_name = data.azurerm_resource_group.main.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes = [local.public_subnets[1].address_prefixes]
+
+  depends_on = [ azurerm_virtual_network.vnet ]
+}
+
+#-------------------------------- nat gateway & associations ------------------------------------#
+
+# create nat gateway -> associate to subnet -> create public ip -> associate IP to nat gateway
+
+#----- nat gateway for bastion subnet, or zone 1 subnet -----#
 resource "azurerm_nat_gateway" "nat_gateway_zone1" {
-  name                = "NATgateway-for-bastion"
+  name                = "NATgateway-for-zone1"                                     // bastion host is located in zone 1
   location            = data.azurerm_resource_group.main.location
   resource_group_name = data.azurerm_resource_group.main.name
   zones = [ "1" ]
@@ -186,42 +198,9 @@ resource "azurerm_subnet_nat_gateway_association" "bastion_subnet" {
   depends_on = [ azurerm_subnet.bastion_subnet, azurerm_nat_gateway.nat_gateway_zone1 ]        // needs bastion subnet and NAT gateway
 }
 
-// public subnet for application gateway
-resource "azurerm_subnet" "agw_subnet" {
-  name = local.public_subnets[1].name
-  resource_group_name = data.azurerm_resource_group.main.name
-  virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes = [local.public_subnets[1].address_prefixes]
-
-  depends_on = [ azurerm_virtual_network.vnet ]
-}
-
-// nat gateway for agw subnet
-resource "azurerm_nat_gateway" "nat_gateway_zone2" {
-  name                = "NATgateway-for-agw"
-  location            = data.azurerm_resource_group.main.location
-  resource_group_name = data.azurerm_resource_group.main.name
-  zones = [ "2" ]
-
-  depends_on = [ azurerm_virtual_network.vnet ]
-  
-}
-
-//associate NAT Gateway to agw subnet
-resource "azurerm_subnet_nat_gateway_association" "agw_subnet" {
-  subnet_id           = azurerm_subnet.agw_subnet.id
-  nat_gateway_id      = azurerm_nat_gateway.nat_gateway_zone2.id
-
-  depends_on = [ azurerm_subnet.agw_subnet, azurerm_nat_gateway.nat_gateway_zone2 ]        // needs agw subnet and nat gateway
-}
-
-
-#----------------------- public IPs ------------------------#          // needs rework
-
-# Elastic IPs for bastion subnet
-resource "azurerm_public_ip" "public_ip_nat_bastion" {
-  //for_each            = length(local.public_subnets)
-  name                = "nat-public-ip-for-bastion-subnet"   // add random number
+//this creates a public IP for this nat gateway
+resource "azurerm_public_ip" "public_ip_nat_zone1" {
+  name                = "public-ip-ngw-zone1"   
   location            = data.azurerm_resource_group.main.location
   resource_group_name = data.azurerm_resource_group.main.name
   allocation_method   = "Static"
@@ -232,17 +211,43 @@ resource "azurerm_public_ip" "public_ip_nat_bastion" {
   depends_on = [ azurerm_virtual_network.vnet ]
 }
 
-// associate nat gateway id with bastion subnet
+// associate nat gateway with the public IP above
 resource "azurerm_nat_gateway_public_ip_association" "nat_to_ip_association1" {
   nat_gateway_id      = azurerm_nat_gateway.nat_gateway_zone1.id
-  public_ip_address_id = azurerm_public_ip.public_ip_nat_bastion.id
+  public_ip_address_id = azurerm_public_ip.public_ip_nat_zone1.id
 
-  depends_on = [ azurerm_public_ip.public_ip_nat_bastion, azurerm_nat_gateway.nat_gateway_zone1 ]
+  depends_on = [ azurerm_public_ip.public_ip_nat_zone1, azurerm_nat_gateway.nat_gateway_zone1 ]
 }
 
-// elastic IP for agw public subnet
-resource "azurerm_public_ip" "public_ip_nat_agw" {
-  name                = "nat-public-ip-for-agw-subnet"   // add random number
+
+#----- this creates a nat gateway for agw subnet, or zone 2 subnet -----#
+resource "azurerm_nat_gateway" "nat_gateway_zone2" {
+  name                = "NATgateway-for-zone2"
+  location            = data.azurerm_resource_group.main.location
+  resource_group_name = data.azurerm_resource_group.main.name
+  zones = [ "2" ]
+
+  depends_on = [ azurerm_virtual_network.vnet ]
+  
+}
+
+//associates NAT Gateway to zone 2 subnets, includes the agw public subnet, and private vm subnet
+resource "azurerm_subnet_nat_gateway_association" "agw_subnet" {
+  subnet_id           = azurerm_subnet.agw_subnet.id
+  nat_gateway_id      = azurerm_nat_gateway.nat_gateway_zone2.id
+
+  depends_on = [ azurerm_subnet.agw_subnet, azurerm_nat_gateway.nat_gateway_zone2 ]        // needs agw subnet and nat gateway
+}
+resource "azurerm_subnet_nat_gateway_association" "zone2_vm_subnet" {
+  subnet_id           = azurerm_subnet.vm_subnets[1].id
+  nat_gateway_id      = azurerm_nat_gateway.nat_gateway_zone2.id
+
+  depends_on = [ azurerm_subnet.agw_subnet, azurerm_nat_gateway.nat_gateway_zone2 ]        // needs agw subnet and nat gateway
+}
+
+// this creates a public IP for the zone 2 nat gateway
+resource "azurerm_public_ip" "public_ip_nat_zone2" {
+  name                = "public-ip-ngw-zone2"   // add random number
   location            = data.azurerm_resource_group.main.location
   resource_group_name = data.azurerm_resource_group.main.name
   allocation_method   = "Static"
@@ -253,19 +258,22 @@ resource "azurerm_public_ip" "public_ip_nat_agw" {
   depends_on = [ azurerm_virtual_network.vnet ]
 }
 
-// associate nat gateway id with agw subnet
+// associate nat gateway with the public IP above
 resource "azurerm_nat_gateway_public_ip_association" "nat_to_ip_association2" {
   nat_gateway_id      = azurerm_nat_gateway.nat_gateway_zone2.id
-  public_ip_address_id = azurerm_public_ip.public_ip_nat_agw.id
+  public_ip_address_id = azurerm_public_ip.public_ip_nat_zone2.id
 
-  depends_on = [ azurerm_public_ip.public_ip_nat_agw, azurerm_nat_gateway.nat_gateway_zone2 ]
+  depends_on = [ azurerm_public_ip.public_ip_nat_zone2, azurerm_nat_gateway.nat_gateway_zone2 ]
 }
 
 
-#----------------------- zone 1 private route tables ------------------------#
+
+
+
+#----------------------------------- zone 1 private route tables ------------------------------------#
 
 resource "azurerm_route_table" "route_tables_zone1" {
-  name                = "route-table-to-bastion-subnet"
+  name                = "route-from-zone1"
   location            = data.azurerm_resource_group.main.location
   resource_group_name = data.azurerm_resource_group.main.name
 
@@ -273,10 +281,10 @@ resource "azurerm_route_table" "route_tables_zone1" {
     name                   = "nat-access"                             // Route for internet access via NAT Gateway
     address_prefix         = var.all_cidr
     next_hop_type          = "VirtualAppliance"                                    // use internet                     virtal applicance routes traffic to an azure service - requires next_hop_in_ip_address - define nat gateways public IP
-    next_hop_in_ip_address = azurerm_public_ip.public_ip_nat_bastion.ip_address   //NAT Gateway for internet access
+    next_hop_in_ip_address = azurerm_public_ip.public_ip_nat_zone1.ip_address   //NAT Gateway for internet access
   }
 
-  depends_on = [ azurerm_public_ip.public_ip_nat_bastion, azurerm_nat_gateway.nat_gateway_zone1 ]
+  depends_on = [ azurerm_public_ip.public_ip_nat_zone1, azurerm_nat_gateway.nat_gateway_zone1 ]
 }
 
 #------- route table associations --------#
@@ -290,10 +298,10 @@ resource "azurerm_subnet_route_table_association" "zone1_rt_association_db" {
   route_table_id = azurerm_route_table.route_tables_zone1.id
 }
 
-#----------------------- zone 2 private route tables ------------------------#
+#-------------------------------------- zone 2 private route tables -------------------------------------#
 
 resource "azurerm_route_table" "route_tables_zone2" {
-  name                = "route-table-to-app-gateway-subnet"
+  name                = "route-from-zone2"
   location            = data.azurerm_resource_group.main.location
   resource_group_name = data.azurerm_resource_group.main.name
 
@@ -301,10 +309,10 @@ resource "azurerm_route_table" "route_tables_zone2" {
     name                   = "nat-access"                             // Route to internet via NAT Gateway
     address_prefix         = var.all_cidr
     next_hop_type          = "VirtualAppliance"                                    // virtal applicance routes traffic to an azure service - requires next_hop_in_ip_address - define nat gateways public IP
-    next_hop_in_ip_address = azurerm_public_ip.public_ip_nat_agw.ip_address   //NAT Gateway for internet access
+    next_hop_in_ip_address = azurerm_public_ip.public_ip_nat_zone2.ip_address  //NAT Gateway for internet access
   }
 
-  depends_on = [ azurerm_public_ip.public_ip_nat_agw, azurerm_nat_gateway.nat_gateway_zone2 ]
+  depends_on = [ azurerm_public_ip.public_ip_nat_zone2, azurerm_nat_gateway.nat_gateway_zone2 ]
 }
 
 #------- route table associations --------#
@@ -333,7 +341,7 @@ resource "azurerm_route_table" "public_rt" {                 // check this works
 }
 
 #------- route table associations --------#
-# resource "azurerm_subnet_route_table_association" "public_bastion_rt_association" {      // cannot attach route table to 
+# resource "azurerm_subnet_route_table_association" "public_bastion_rt_association" {      // cannot attach route table to bastion subnet
 #   subnet_id      = azurerm_subnet.bastion_subnet.id                        
 #   route_table_id = azurerm_route_table.public_rt.id
 # }
@@ -557,29 +565,29 @@ resource "azurerm_subnet_route_table_association" "public_agw_rt_association" {
 # #---------------------------- bastion & IP -----------------------------#
 // includes all things bastion
 
-# resource "azurerm_bastion_host" "bastion" {
-#   //for_each = toset(local.public_subnets)                                // 1 bastion per vnet
-#   name                     = "bastion"
-#   location                 = data.azurerm_resource_group.main.location
-#   resource_group_name      = data.azurerm_resource_group.main.name
-#   //virtual_network_id = azurerm_virtual_network.vnet.id                   // only supported when sku is developer, cannot use ip_configuration[] block
-#   sku = "Standard"                                                      // standard sku for production, needs ip_configuration[] block, cannot use vnet_id
+resource "azurerm_bastion_host" "bastion" {
+  //for_each = toset(local.public_subnets)                                // 1 bastion per vnet
+  name                     = "bastion"
+  location                 = data.azurerm_resource_group.main.location
+  resource_group_name      = data.azurerm_resource_group.main.name
+  //virtual_network_id = azurerm_virtual_network.vnet.id                   // only supported when sku is developer, cannot use ip_configuration[] block
+  sku = "Standard"                                                      // standard sku for production, needs ip_configuration[] block, cannot use vnet_id
 
-#   ip_configuration {
-#     name = "ip_config"
-#     public_ip_address_id = azurerm_public_ip.public_ip_bastion.id
-#     subnet_id = azurerm_subnet.bastion_subnet.id
-#   }
-# }
+  ip_configuration {
+    name = "ip_config"
+    public_ip_address_id = azurerm_public_ip.public_ip_bastion.id
+    subnet_id = azurerm_subnet.bastion_subnet.id
+  }
+}
 
-# resource "azurerm_public_ip" "public_ip_bastion" {
-#   //for_each            = toset(local.public_subnets)                         //Iterate over the public subnets
-#   name                = "bastion-ip"
-#   location            = data.azurerm_resource_group.main.location
-#   resource_group_name = data.azurerm_resource_group.main.name
-#   allocation_method   = "Static"
-#   //sku                 = "Standard"
-# }
+resource "azurerm_public_ip" "public_ip_bastion" {
+  //for_each            = toset(local.public_subnets)                         //Iterate over the public subnets
+  name                = "bastion-ip"
+  location            = data.azurerm_resource_group.main.location
+  resource_group_name = data.azurerm_resource_group.main.name
+  allocation_method   = "Static"
+  //sku                 = "Standard"
+}
 
 
 # #---------------------------- application gateway -----------------------------#
@@ -658,7 +666,7 @@ resource "azurerm_subnet_route_table_association" "public_agw_rt_association" {
 #   }
 # }
 
-# #---------------------------- linux scale sets -----------------------------#
+#----------------------------------- key vault & private key --------------------------------------#
 
 //refers to prebuilt image from community images
 # data "azurerm_image" "community_image" {
@@ -704,56 +712,96 @@ resource "azurerm_key_vault" "key_vault" {
 
 # Store the public SSH key in Key Vault (Optional)
 resource "azurerm_key_vault_secret" "public_key" {
-  name         = "ssh-private-key"
+  name         = "private-key"
   value        = tls_private_key.tls_private_key.private_key_pem
   key_vault_id = azurerm_key_vault.key_vault.id
 
-  depends_on = [ azurerm_key_vault.key_vault ]
+  depends_on = [ azurerm_key_vault.key_vault, 
+  azurerm_key_vault_access_policy.user1_kv_access_policy, 
+  azurerm_key_vault_access_policy.local_machine_kv_access_policy, 
+  azurerm_key_vault_access_policy.terraform_kv_access_policy ]
 }
 
 data "azurerm_client_config" "current" {}
 
 
-resource "azurerm_key_vault_access_policy" "kv_access_policy" {
+# Access Policy for User 1
+resource "azurerm_key_vault_access_policy" "user1_kv_access_policy" {
   key_vault_id = azurerm_key_vault.key_vault.id
   tenant_id    = "16983dae-9f48-4a35-b9f5-0519bf3cdf09"
-  //object_id    = "7b599db4-a713-4a7e-9c06-8b62bf11eed2"    // for service principal terraform
-  object_id    = "900a20af-26d8-47b0-85d0-b1437c8af627"      // for user - use this one
-
+  object_id    = "900a20af-26d8-47b0-85d0-b1437c8af627"  # User 1 object ID
 
   key_permissions = [
     "Get", "List", "Create", "Update", "Import"
   ]
 
   secret_permissions = [
-    "Get", "List", "Set"
+    "Get", "List", "Set", "Recover", "Delete", "Restore"
   ]
 
-  depends_on = [ azurerm_key_vault.key_vault ]
+  certificate_permissions = [
+    "Get", "List", "Create"
+  ]
+
+  depends_on = [azurerm_key_vault.key_vault]
 }
+
+# Access Policy for Local Machine Application
+resource "azurerm_key_vault_access_policy" "local_machine_kv_access_policy" {
+  key_vault_id = azurerm_key_vault.key_vault.id
+  tenant_id    = "16983dae-9f48-4a35-b9f5-0519bf3cdf09"
+  object_id    = "3728e04a-d9d3-4d3c-b503-b287b1aaa666"  # Local Machine object ID
+
+  key_permissions = [
+    "Get", "List", "Create", "Update", "Import"
+  ]
+
+  secret_permissions = [
+    "Get", "List", "Set", "Recover", "Delete", "Restore"
+  ]
+
+  certificate_permissions = [
+    "Get", "List", "Create"
+  ]
+
+  depends_on = [azurerm_key_vault.key_vault]
+}
+
+# Access Policy for Terraform Service Principal
+resource "azurerm_key_vault_access_policy" "terraform_kv_access_policy" {
+  key_vault_id = azurerm_key_vault.key_vault.id
+  tenant_id    = "16983dae-9f48-4a35-b9f5-0519bf3cdf09"
+  object_id    = "a4815ff2-fc06-4608-b1c6-9b902ac9ffb3"  # Terraform Service Principal object ID
+
+  key_permissions = [
+    "Get", "List", "Create", "Update", "Import"
+  ]
+
+  secret_permissions = [
+    "Get", "List", "Set", "Recover", "Delete", "Restore"
+  ]
+
+  certificate_permissions = [
+    "Get", "List", "Create"
+  ]
+
+  depends_on = [azurerm_key_vault.key_vault]
+}
+
+#------------------------------------ linux scale sets ---------------------------------------#
 
 //created two scale sets per subnet for more granular control
 resource "azurerm_linux_virtual_machine_scale_set" "linux_vm" {
-  //for_each = azurerm_subnet.vm_subnets
   name = "linux-vm"
   location = data.azurerm_resource_group.main.location
   resource_group_name = data.azurerm_resource_group.main.name
   admin_username = "Admin0"
   admin_password = "Bratunac?13"
-
-  # secret {                                            // figure this out
-  #   key_vault_id = azurerm_key_vault.key_vault.id
-  #   certificate {
-  #     url = 
-  #   }
-  # }
   sku = "Standard_B2s"
-  instances = 1
+  instances = 2
   upgrade_mode = "Automatic"
   zones = [ "1" ]
   disable_password_authentication = true
-  // add source image id or source image reference
-  //source_image_id = data.azurerm_image.community_image.id
   
   admin_ssh_key {
     public_key = tls_private_key.tls_private_key.public_key_openssh
@@ -859,29 +907,29 @@ resource "azurerm_network_interface" "vmss_2" {
 }
 
 
-# #---------------------------- database server -----------------------------#
+# # #---------------------------- database server -----------------------------#
 
 
-resource "azurerm_mysql_flexible_server" "sql_server" {
-  name                   = "mf37-flexible-server"
-  resource_group_name    = data.azurerm_resource_group.main.name
-  location               = data.azurerm_resource_group.main.location
-  administrator_login    = "admin0"
-  administrator_password = "Bratunac?13"
-  sku_name               = "GP_Standard_D2ds_v4"
-  private_dns_zone_id = azurerm_private_dns_zone.zone.id
-  delegated_subnet_id = azurerm_subnet.db_subnets[0].id                    // primary server in zone 1
-  zone = "1"
+# resource "azurerm_mysql_flexible_server" "sql_server" {
+#   name                   = "database1-mf37"
+#   resource_group_name    = data.azurerm_resource_group.main.name
+#   location               = data.azurerm_resource_group.main.location
+#   administrator_login    = "admin0"
+#   administrator_password = "Bratunac?13"
+#   sku_name               = "GP_Standard_D2ds_v4"
+#   private_dns_zone_id = azurerm_private_dns_zone.zone.id
+#   delegated_subnet_id = azurerm_subnet.db_subnets[0].id                    // primary server in zone 1
+#   zone = "1"
   
-  high_availability {
-    mode = "ZoneRedundant"                                                    // enables standby server in the remaining zone (2)
-    standby_availability_zone = "2"
-  }
+#   high_availability {
+#     mode = "ZoneRedundant"                                                    // enables standby server in the remaining zone (2)
+#     standby_availability_zone = "2"
+#   }
 
-  depends_on = [azurerm_private_dns_zone_virtual_network_link.zone_link]
+#   depends_on = [azurerm_private_dns_zone_virtual_network_link.zone_link]
 
 
-}
+# }
 
 # resource "azurerm_mysql_flexible_database" "mysql_database" {
 #   name                = "mysql-flexible-database"
@@ -904,17 +952,17 @@ resource "azurerm_mysql_flexible_server" "sql_server" {
 # #------------------ private dns zone -------------------#
 
 
-resource "azurerm_private_dns_zone" "zone" {
-  name                = "mf37.mysql.database.azure.com"
-  resource_group_name = data.azurerm_resource_group.main.name
-}
+# resource "azurerm_private_dns_zone" "zone" {
+#   name                = "mf37.mysql.database.azure.com"
+#   resource_group_name = data.azurerm_resource_group.main.name
+# }
 
-resource "azurerm_private_dns_zone_virtual_network_link" "zone_link" {
-  name                  = "mf37VnetZone.com"
-  private_dns_zone_name = azurerm_private_dns_zone.zone.name
-  virtual_network_id    = azurerm_virtual_network.vnet.id
-  resource_group_name   = data.azurerm_resource_group.main.name
-}
+# resource "azurerm_private_dns_zone_virtual_network_link" "zone_link" {
+#   name                  = "mf37VnetZone.com"
+#   private_dns_zone_name = azurerm_private_dns_zone.zone.name
+#   virtual_network_id    = azurerm_virtual_network.vnet.id
+#   resource_group_name   = data.azurerm_resource_group.main.name
+# }
 
 
 # #---------------------------- storage accounts -----------------------------#
