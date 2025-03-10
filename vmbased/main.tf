@@ -280,8 +280,8 @@ resource "azurerm_route_table" "route_tables_zone1" {
   route {
     name                   = "nat-access"                             // Route for internet access via NAT Gateway
     address_prefix         = var.all_cidr
-    next_hop_type          = "VirtualAppliance"                                    // use internet                     virtal applicance routes traffic to an azure service - requires next_hop_in_ip_address - define nat gateways public IP
-    next_hop_in_ip_address = azurerm_public_ip.public_ip_nat_zone1.ip_address   //NAT Gateway for internet access
+    next_hop_type          = "Internet"                                    // use internet                     virtal applicance routes traffic to an azure service - requires next_hop_in_ip_address - define nat gateways public IP
+    //next_hop_in_ip_address = azurerm_public_ip.public_ip_nat_zone1.ip_address   //NAT Gateway for internet access - comment this out if using internet
   }
 
   depends_on = [ azurerm_public_ip.public_ip_nat_zone1, azurerm_nat_gateway.nat_gateway_zone1 ]
@@ -308,8 +308,8 @@ resource "azurerm_route_table" "route_tables_zone2" {
   route {
     name                   = "nat-access"                             // Route to internet via NAT Gateway
     address_prefix         = var.all_cidr
-    next_hop_type          = "VirtualAppliance"                                    // virtal applicance routes traffic to an azure service - requires next_hop_in_ip_address - define nat gateways public IP
-    next_hop_in_ip_address = azurerm_public_ip.public_ip_nat_zone2.ip_address  //NAT Gateway for internet access
+    next_hop_type          = "Internet"                                    // virtal applicance routes traffic to an azure service - requires next_hop_in_ip_address - define nat gateways public IP
+    //next_hop_in_ip_address = azurerm_public_ip.public_ip_nat_zone2.ip_address  //NAT Gateway for internet access - comment this out if using internet
   }
 
   depends_on = [ azurerm_public_ip.public_ip_nat_zone2, azurerm_nat_gateway.nat_gateway_zone2 ]
@@ -352,183 +352,205 @@ resource "azurerm_subnet_route_table_association" "public_agw_rt_association" {
 }
 
 #----------------------------- security groups ------------------------------#
-// probably dont need bastion nsg???
-#----nsg for bastion----#
-# resource "azurerm_network_security_group" "bastion_nsg" {               // security group allows bastion host to ssh into all resources in vnet
-#   name                = "bastion-nsg"
-#   location            = data.azurerm_resource_group.main.location
-#   resource_group_name = data.azurerm_resource_group.main.name
 
-#   security_rule {
-#     name                       = "Allow-SSH"
-#     priority                   = 100
-#     direction                  = "Inbound"
-#     access                     = "Allow"
-#     protocol                  = "Tcp"
-#     source_port_range         = "*"
-#     destination_port_range    = "22"  # SSH port
-#     source_address_prefix     = "*"  # Allow from anywhere
-#     destination_address_prefix = "*"
-#     description               = "Allow SSH from anywhere to Bastion host"
-#   }
-  
+#---- nsg for bastion subnet ----#
+resource "azurerm_network_security_group" "bastion_nsg" {
+  name                = "nsg-BastionSubnet"
+  location            = data.azurerm_resource_group.main.location
+  resource_group_name = data.azurerm_resource_group.main.name
 
-#   security_rule {
-#     name                       = "Allow-SSH-outbound"
-#     priority                   = 110
-#     direction                  = "Outbound"
-#     access                     = "Allow"
-#     protocol                  = "Tcp"
-#     source_port_range         = "*"
-#     destination_port_range    = "*"  
-#     source_address_prefix     = "*"  
-#     destination_address_prefix = "*"
-#     description               = "Allow outbound SSH from bastion to anywhere"
-#   }
+# -- inbound rules -- #
 
-# }
+  security_rule {
+    name                       = "allow-ingress-443-from-public-internet"
+    direction                  = "Inbound"
+    priority                  = 100
+    protocol                  = "Tcp"
+    source_address_prefix     = "*"
+    destination_port_range    = "443"
+    access                    = "Allow"
+    source_port_range         = "*"
+    destination_address_prefix = "*"
+    description               = "Allow inbound traffic from the internet to port 443 for Bastion"
+  }
+
+  security_rule {
+    name                       = "allow-ingress-443-from-gateway-manager"
+    direction                  = "Inbound"
+    priority                  = 110
+    protocol                  = "Tcp"
+    source_address_prefix     = "GatewayManager"
+    destination_port_range    = "443"
+    access                    = "Allow"
+    source_port_range         = "*"
+    destination_address_prefix = "*"
+    description               = "Allow inbound control plane traffic from Gateway Manager"
+  }
+
+  security_rule {
+    name                       = "allow-ingress-8080-from-virtualnetwork"
+    direction                  = "Inbound"
+    priority                  = 120
+    protocol                  = "Tcp"
+    source_address_prefix     = "VirtualNetwork"
+    destination_port_range    = "8080"
+    access                    = "Allow"
+    source_port_range         = "*"
+    destination_address_prefix = "*"
+    description               = "Allow inbound data plane traffic from VirtualNetwork"
+  }
+
+  security_rule {
+    name                       = "allow-ingress-5701-from-virtualnetwork"
+    direction                  = "Inbound"
+    priority                  = 130
+    protocol                  = "Tcp"
+    source_address_prefix     = "VirtualNetwork"
+    destination_port_range    = "5701"
+    access                    = "Allow"
+    source_port_range         = "*"
+    destination_address_prefix = "*"
+    description               = "Allow inbound data plane traffic from VirtualNetwork"
+  }
+
+  security_rule {
+    name                       = "allow-ingress-443-from-azure-loadbalancer"
+    direction                  = "Inbound"
+    priority                  = 140
+    protocol                  = "Tcp"
+    source_address_prefix     = "AzureLoadBalancer"
+    destination_port_range    = "443"
+    access                    = "Allow"
+    source_port_range         = "*"
+    destination_address_prefix = "*"
+    description               = "Allow inbound health probe traffic from Azure Load Balancer"
+  }
+
+# -- outbound rules -- #
+
+  security_rule {
+    name                       = "allow-egress-to-vm-subnet-3389"
+    direction                  = "Outbound"
+    priority                  = 100
+    protocol                  = "Tcp"
+    source_address_prefix     = "*"
+    destination_address_prefix = "VirtualNetwork"
+    destination_port_range    = "3389"
+    access                    = "Allow"
+    source_port_range         = "*"
+    description               = "Allow egress to VM subnets for RDP"
+  }
+
+  security_rule {
+    name                       = "allow-egress-to-vm-subnet-22"
+    direction                  = "Outbound"
+    priority                  = 110
+    protocol                  = "Tcp"
+    source_address_prefix     = "*"
+    destination_address_prefix = "VirtualNetwork"
+    destination_port_range    = "22"
+    access                    = "Allow"
+    source_port_range         = "*"
+    description               = "Allow egress to VM subnets for SSH"
+  }
+
+  security_rule {
+    name                       = "allow-egress-8080-to-virtualnetwork"
+    direction                  = "Outbound"
+    priority                  = 120
+    protocol                  = "Tcp"
+    source_address_prefix     = "VirtualNetwork"
+    destination_address_prefix = "VirtualNetwork"
+    destination_port_range    = "8080"
+    access                    = "Allow"
+    source_port_range         = "*"
+    description               = "Allow outbound data plane traffic to VirtualNetwork"
+  }
+
+  security_rule {
+    name                       = "allow-egress-5701-to-virtualnetwork"
+    direction                  = "Outbound"
+    priority                  = 130
+    protocol                  = "Tcp"
+    source_address_prefix     = "VirtualNetwork"
+    destination_address_prefix = "VirtualNetwork"
+    destination_port_range    = "5701"
+    access                    = "Allow"
+    source_port_range         = "*"
+    description               = "Allow outbound data plane traffic to VirtualNetwork"
+  }
+
+  security_rule {
+    name                       = "allow-egress-to-azurecloud-443"
+    direction                  = "Outbound"
+    priority                  = 140
+    protocol                  = "Tcp"
+    source_address_prefix     = "*"
+    destination_address_prefix = "AzureCloud"
+    destination_port_range    = "443"
+    access                    = "Allow"
+    source_port_range         = "*"
+    description               = "Allow outbound traffic to Azure public endpoints"
+  }
+
+  security_rule {
+    name                       = "allow-egress-to-internet-80"
+    direction                  = "Outbound"
+    priority                  = 150
+    protocol                  = "Tcp"
+    source_address_prefix     = "*"
+    destination_address_prefix = "*"
+    destination_port_range    = "80"
+    access                    = "Allow"
+    source_port_range         = "*"
+    description               = "Allow outbound traffic to Internet on port 80"
+  }
+
+}
 
 // block associates the Bastion NSG with the Bastion subnet
-# resource "azurerm_subnet_network_security_group_association" "bastion_nsg_association" {
-#   subnet_id                 = azurerm_subnet.bastion_subnet.id
-#   network_security_group_id = azurerm_network_security_group.bastion_nsg.id
-# }
+resource "azurerm_subnet_network_security_group_association" "bastion_nsg_association" {
+  subnet_id                 = azurerm_subnet.bastion_subnet.id
+  network_security_group_id = azurerm_network_security_group.bastion_nsg.id
+}
 
 #---- nsg for the application gateway----#
-# resource "azurerm_network_security_group" "agw_nsg" {
-#   name                        = "application-gateway-network-security-group"
-#   location                    = data.azurerm_resource_group.main.location
-#   resource_group_name         = data.azurerm_resource_group.main.name
+resource "azurerm_network_security_group" "agw_nsg" {
+  name                        = "application-gateway-network-security-group"
+  location                    = data.azurerm_resource_group.main.location
+  resource_group_name         = data.azurerm_resource_group.main.name
+ 
+// add skurty rules
 
-#   security_rule {
-#     name                       = "allow-http-agw"
-#     priority                   = 100
-#     direction                  = "Inbound"
-#     access                     = "Allow"
-#     protocol                   = "Tcp"
-#     source_port_range          = "*"
-#     destination_port_range     = "80"  # HTTP Port
-#     source_address_prefix      = "*"
-#     destination_address_prefix = "*"
-#   }
+}
 
-#   security_rule {
-#     name                       = "allow-https-agw"
-#     priority                   = 101
-#     direction                  = "Inbound"
-#     access                     = "Allow"
-#     protocol                   = "Tcp"
-#     source_port_range          = "*"
-#     destination_port_range     = "443"  # HTTPS Port
-#     source_address_prefix      = "*"
-#     destination_address_prefix = "*"
-#   }
-
-#   security_rule {
-#     name                       = "allow-backend-vm"
-#     priority                   = 102
-#     direction                  = "Outbound"
-#     access                     = "Allow"
-#     protocol                   = "Tcp"
-#     source_port_range          = "*"
-#     destination_port_range     = "80"  # Allow traffic to VM backend on HTTP port
-#     source_address_prefix      = "*"
-#     destination_address_prefix = "*"
-#   }
-
-#   security_rule {
-#     name                       = "allow-65200-65535-agw"
-#     priority                   = 103
-#     direction                  = "Inbound"
-#     access                     = "Allow"
-#     protocol                   = "Tcp"
-#     source_port_range          = "*"
-#     destination_port_range     = "65200-65535"  # Required range for Application Gateway
-#     source_address_prefix      = "*"
-#     destination_address_prefix = "*"
-#   }
-# }
-
-# // block associates the Bastion NSG with the Bastion subnet
-# resource "azurerm_subnet_network_security_group_association" "agw_nsg_association" {
-#   subnet_id                 = azurerm_subnet.agw_subnet.id
-#   network_security_group_id = azurerm_network_security_group.agw_nsg.id
-# }
+// block associates the Bastion NSG with the Bastion subnet
+resource "azurerm_subnet_network_security_group_association" "agw_nsg_association" {
+  subnet_id                 = azurerm_subnet.agw_subnet.id
+  network_security_group_id = azurerm_network_security_group.agw_nsg.id
+}
 
 #---- nsg for the virtual machines----#
 # resource "azurerm_network_security_group" "vm_nsg" {
 #   name                = "virtual-machine-nsg"
 #   location            = data.azurerm_resource_group.main.location
 #   resource_group_name = data.azurerm_resource_group.main.name   
-#   // add rules after creation of vms/ allow inbound traffic from load balancer, database and bastion only. allow outbound traffic to nat gateway only
-
-#   security_rule {
-#     name                       = "Allow-ssh-from-bastion"
-#     priority                   = 100
-#     direction                  = "Inbound"
-#     access                     = "Allow"
-#     protocol                  = "Tcp"
-#     source_port_range         = "*"
-#     destination_port_range    = "22"  
-#     //source_address_prefix     = azurerm_public_ip.public_ip_bastion.ip_address  // allow ssh traffic from bastion
-#     destination_address_prefix = "*"
-#     description               = "Allow ssh access from Bastion host"
-#   }
-
-#   security_rule {
-#     name                       = "ssh-outbound"          // allow outbound ssh 
-#     priority                   = 110
-#     direction                  = "Outbound"
-#     access                     = "Allow"
-#     protocol                  = "Tcp"
-#     source_port_range         = "*"
-#     destination_port_range    = "22"  
-#     source_address_prefix     = "*"  
-#     destination_address_prefix = "*"
-#     description               = "Allow ssh access from Bastion host"
-#   }
-
-#   security_rule {
-#     name                       = "http-outbound"
-#     priority                   = 120
-#     direction                  = "Outbound"
-#     access                     = "Allow"
-#     protocol                   = "Tcp"
-#     source_port_range          = "*"
-#     destination_port_range     = "80"  # HTTP Port
-#     source_address_prefix      = "*"
-#     destination_address_prefix = "Internet"
-#   }
-
-#   security_rule {
-#     name                       = "https-outbound"
-#     priority                   = 130
-#     direction                  = "Outbound"
-#     access                     = "Allow"
-#     protocol                   = "Tcp"
-#     source_port_range          = "*"
-#     destination_port_range     = "443"  # HTTPS Port
-#     source_address_prefix      = "*"
-#     destination_address_prefix = "Internet"
-#   }
+#   // add rules after creation of vms/ allow inbound traffic from load balancer, database and bastion only. allow outbound traffic to everywhere
+  
 # }
 
 
 # #2 blocks to associate nsg with subnets the vms are located in
-# resource "azurerm_subnet_network_security_group_association" "zone1_vm_nsg" {
+# resource "azurerm_subnet_network_security_group_association" "zone1_association" {
 #   subnet_id                 = azurerm_subnet.vm_subnets[0].id
 #   network_security_group_id = azurerm_network_security_group.vm_nsg.id
 # }
 
-# resource "azurerm_subnet_network_security_group_association" "zone2_vm_nsg" {
+# resource "azurerm_subnet_network_security_group_association" "zone2_association" {
 #   subnet_id                 = azurerm_subnet.vm_subnets[1].id
 #   network_security_group_id = azurerm_network_security_group.vm_nsg.id
 # }
 
-# resource "azurerm_subnet_network_security_group_association" "zone2_pubsub" {
-#   subnet_id                 = azurerm_subnet.agw_subnet.id
-#   network_security_group_id = azurerm_network_security_group.vm_nsg.id
-# }
 
 # # #---- nsg for the databases----#
 # resource "azurerm_network_security_group" "db_nsg" {
