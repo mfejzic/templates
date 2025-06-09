@@ -1,0 +1,14 @@
+#cloud-config
+packages:
+  - apache2
+  - awscli
+
+runcmd:
+  - sudo apt update -y
+  - sudo aws s3 cp s3://mfejzic37-secondary/host/index.html /var/www/html/
+  - sudo systemctl start apache2
+  - sudo systemctl enable apache2
+  - sudo apt -y install python3-pip
+  - sudo pip3 install Flask
+  - python3 app.py
+

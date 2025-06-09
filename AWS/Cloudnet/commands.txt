@@ -1,0 +1,38 @@
+                    ## HOW TO SSH INTO PRIVATE INSTANCES ##
+#START SSH AGENT ON YOUR LOCAL MACHINE, ENSURE AGENT IS RUNNING,  ADD IDENTITY 
+ssh-agent -s
+eval $(ssh-agent -s)
+ssh-add bastionKP.pem
+ssh-add -L bastionKP.pem // CHECK FILE
+# LOG INTO PUBLIC INSTANCE
+ssh -A ubuntu@publicIP  // Agent Forwarding will automatically use your local key for authentication.
+# LOG INTO PRIVATE INSTANCE 
+ssh ubuntu@privateIP
+
+#SSH INTO PUBLIC INSTANCE WITHOUT AGENT FORWARDING
+ssh -i bastionKP.pem ec2-user@publicIP
+
+
+# check if DNS resolution is working as expected
+nslookup www.google.com 
+
+
+# Enable the SSL module and HTTPS site on instance
+sudo a2enmod ssl
+sudo a2ensite default-ssl
+sudo apt-get install openssl -y
+
+
+# Fetch index.html from S3 and serve it
+sudo aws s3 cp s3://mfejzic37/host/index.html /var/www/html/
+
+
+# Install web server software (e.g., Apache)
+sudo apt update -y
+sudo apt install -y apache2
+#Install aws cli
+sudo apt install awscli
+
+
+#CHECK STATUS OF APACHE
+sudo systemctl status  apache2
