@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Message Board</title>
+</head>
+<body>
+    <h1>Welcome! You've visited this page {{ visits }} times.</h1>
+
+    <form method="POST">
+        <input type="text" name="message" required>
+        <input type="submit" value="Send Message">
+    </form>
+
+    <h2>Messages:</h2>
+    <ul>
+        {% for id, message in messages %}
+            <li><strong>{{ id }}:</strong> {{ message }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

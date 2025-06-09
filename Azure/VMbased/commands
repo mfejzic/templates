@@ -1,0 +1,119 @@
+## key vault access policy has duplication issue, just paste these imports in terminal
+
+    -> terraform import azurerm_key_vault_access_policy.user1 "/subscriptions/064b2bea-3fc1-4bf7-b067-3d942c23e4dd/resourceGroups/vmbased-vnet/providers/Microsoft.KeyVault/vaults/key-vault-mf37/objectId/900a20af-26d8-47b0-85d0-b1437c8af627"
+
+    -> terraform import azurerm_key_vault_access_policy.local_machine "/subscriptions/064b2bea-3fc1-4bf7-b067-3d942c23e4dd/resourceGroups/vmbased-vnet/providers/Microsoft.KeyVault/vaults/key-vault-mf37/objectId/3728e04a-d9d3-4d3c-b503-b287b1aaa666"
+
+    -> terraform import azurerm_key_vault_access_policy.terraform_application "/subscriptions/064b2bea-3fc1-4bf7-b067-3d942c23e4dd/resourceGroups/vmbased-vnet/providers/Microsoft.KeyVault/vaults/key-vault-mf37/objectId/a4815ff2-fc06-4608-b1c6-9b902ac9ffb3"
+
+
+
+## check if gateway communicates with ports 80, 443
+    # nc -zv <app_gateway_ip> 80
+    # nc -zv <app_gateway_ip> 443
+
+
+## delete in this order
+    # remove everything from backend pool targets
+    # delete app gateway it takes 5 mins
+    # delete gateway ip address
+    # terraform destroy -auto-approve
+
+
+# copy image_key.pem to linux home directory, do these commands in ubuntu terminal -> do this if you plan to use ssh often
+    # mkdir -p ~/.ssh
+    # cp /mnt/c/myapp-ubuntu/image_key.pem ~/.ssh/image_key.pem
+    # chmod 600 ~/.ssh/image_key.pem
+    ## then run ssh command 
+    -> ssh -i ~/.ssh/image_key.pem azureuser@<public-ip>                 // current ip  --> 20.55.39.211
+
+# copy all files from C:\myapp-ubuntu to vm home/azueruser
+    # scp -i ~/.ssh/image_key.pem * azureuser@<public-ip>:/home/azureuser/
+
+# package installation, run these in order
+    # cd ~ ---> sudo chmod +x setup.sh ---> sudo ./setup.sh
+
+# install python dependencies inside the vm
+    # pip3 install -r requirements.txt
+
+# create schema in nano
+    # terminal ---> sudo nano /etc/environment
+    # add these lines 
+        # DB_HOST=server-mf37.mysql.database.azure.com
+        # DB_USER=admin0@server-mf37
+        # DB_PASS=pssword here
+        # DB_NAME=mysql-flexible-database
+    # save it -> ctrl + o, enter, ctrl + x
+    # reload and verify
+        # source /etc/environment
+        # echo $DB_HOST , $DB_USER , $DB_PASS , $DB_NAME
+
+
+## COMMANDS TO VERIFY FUNCTIONALITY ##
+
+    # check if flask is serving locally and externally
+        #curl -i http://127.0.0.1
+        #curl -i http://<vm-public-ip>
+
+    # test database connection from vm
+        # mysql -h <mysql-host> -u <username> -p"$DB_PASS"
+            # mysql -h server-mf37.mysql.database.azure.com -u admin0 -p"$DB_PASS"
+
+    # restart and check nginx
+        # sudo systemctl restart nginx
+        # sudo systemctl status nginx
+    # restart and check flask service
+        # sudo systemctl restart flaskapp
+        # sudo systemctl status flaskapp
+
+    # initalize database tables
+        # python3 /home/azureuser/vmbased/init_db.py     - not used
+        # python3 /var/www/myapp/init_db.py              - use this one
+
+    # Watch logs in real time, refresh browser
+        # journalctl -u flaskapp.service -f
+
+# restart systemd 
+    # sudo systemctl daemon-reexec
+    # sudo systemctl daemon-reload
+    # sudo systemctl restart flaskapp
+    # sudo systemctl status flaskapp
+
+# nano 
+    # SYSTEMD service file w/ gunicorn + flask 
+        # sudo nano /etc/systemd/system/flaskapp.service
+    # app code
+        # sudo nano /var/www/myapp/app.py
+    # template index
+        # sudo nano /var/www/myapp/templates/index.html
+    # requirements
+        # sudo nano /var/www/myapp/requirements.txt
+    # database schema
+        # sudo nano /var/www/myapp/init_db.py
+    # nginx
+        # sudo nano /etc/nginx/sites-available/myapp
+        # sudo nginx -t
+
+
+# enable and start service
+    # sudo systemctl daemon-reexec
+    # sudo systemctl daemon-reload
+    # sudo systemctl enable flaskapp
+    # sudo systemctl start flaskapp
+
+# run gunicorn manually
+    # gunicorn --bind 0.0.0.0:5000 app:app
+
+# check systemd service logs
+    # sudo journalctl -u myapp.service -b --no-pager
+
+# check lsitening ports
+    # sudo lsof -i -P -n | grep LISTEN
+
+# check firewall rules
+    # sudo ufw status
+
+# deprovision the vm
+    # sudo systemctl stop flaskapp.service
+    # sudo waagent -deprovision+user --force
+
