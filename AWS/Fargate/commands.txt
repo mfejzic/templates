@@ -1,0 +1,52 @@
+## UBUNTU  
+
+// install docker on machine
+sudo apt update
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt install docker.io
+sudo pip install flask
+
+//install aws cli
+apt install awscli
+
+//pull images
+dcoker pull image / ex: docker pull busybox
+
+// delete images
+dokcer rmi image / ex: docker rmi busybox
+
+// view images
+docker images
+
+// create container for image
+docker run image / ex: docker run busybox
+
+//create development server / login using : http://localhost:8888/
+docker run -p 8888:80 mfejzic/cat
+
+// view currently running containers
+docker ps
+
+// view all containers ran
+docker ps -a
+
+// stop a running container
+docker stop containerID / ex: docker stop 301c3e4fdcb6
+
+// run commands inside certain container
+docker run -it IMAGE COMMAND / ex: docker run -it busybox sh
+
+// remove container
+docker rm CONTAINER ID / ex: docker rm 191e1014b305
+
+// delete all containers of status of "exited"
+docker rm $(docker ps -a -q -f status=exited)
+
+// build image
+docker build -t yourusername/catnip . / ex: docker build -t mfejzic/catnip .
+
+//run get-login-password
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 876606637086.dkr.ecr.us-
+east-1.amazonaws.com
+
