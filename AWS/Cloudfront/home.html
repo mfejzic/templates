@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        header {
+            background-color: #3498db;
+            color: #fff;
+            text-align: center;
+            padding: 40px;
+        }
+
+        h1 {
+            font-size: 40px;
+            margin: 0;
+        }
+
+        .header-links {
+            margin-top: 10px;
+        }
+
+        .header-links a {
+            text-decoration: none;
+            color: #fff;
+            margin: 0 15px;
+            font-weight: bold;
+            font-size: 18px;
+            transition: color 0.3s;
+        }
+
+        .header-links a:hover {
+            color: #e74c3c;
+        }
+
+        /* Container for Buttons & Connector */
+        .button-container {
+            margin-top: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 60%;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+        }
+
+        .btn {
+            width: 240px;
+            height: 240px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: bold;
+            color: white;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease, opacity 0.3s;
+        }
+
+        .aws-btn {
+            background-color: #FF9900;
+            z-index: 2;
+        }
+
+        .azure-btn {
+            background-color: #0078D4;
+            z-index: 2;
+        }
+
+        .btn:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        /* Connector Bar */
+        .connector {
+            position: absolute;
+            left: 6%;
+            width: 88%; /* Expanded width for full connection */
+            height: 10px;
+            background: linear-gradient(to right, #FF9900, #0078D4);
+            top: 10%;
+            transform: translateY(-50%);
+            transition: background 0.5s ease-in-out;
+            z-index: 1;
+            border-radius: 5px;
+        }
+
+        /* Hover Effects */
+        .aws-btn:hover ~ .connector {
+            background: linear-gradient(to right, #FF9900, #60A5FA);
+        }
+
+        .azure-btn:hover ~ .connector {
+            background: linear-gradient(to right, #60A5FA, #FF9900);
+        }
+
+        /* Extra Buttons Above the Bar */
+        .top-buttons {
+            position: absolute;
+            top: -100px; /* Positioned above the bar */
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+            gap: 60px; /* Adjusted spacing for centering */
+            width: 100%;
+        }
+
+        .top-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: none;  /* Remove black border */
+            background: none;
+            cursor: pointer;
+            transition: transform 0.2s ease, opacity 0.3s;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .top-btn img {
+            width: 100px;  /* Adjust icon size */
+            height: auto;
+            margin-bottom: 10px; /* Space between icon and text */
+        }
+
+
+
+        .top-btn:hover {
+            opacity: 0.8;
+            transform: scale(1.1);
+        }
+
+        .project-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            position: absolute;
+        }
+
+
+
+        /* text box */
+        .button-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 240px;
+            position: relative;
+        }
+
+        .line {
+            width: 4px;
+            height: 40px;
+            background-color: #ccc;
+            margin: 15px 0;
+            border-radius: 2px;
+        }
+
+        .info-box {
+            background-color: #f9f9f9;
+            padding: 35px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 100%;
+        }
+
+        .info-box h3 {
+            margin: 0 0 10px;
+            font-size: 20px;
+            color: #333;
+        }
+
+        .info-box p {
+            margin: 0 0 10px;
+            font-size: 15px;
+            color: #555;
+        }
+
+        .info-box a {
+            color: #3498db;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .info-box a:hover {
+            text-decoration: underline;
+        }
+
+
+                
+        .more-btn {
+            position: absolute;
+            top: 50px;
+            right: 40px;
+            background-color: #e67e22;
+            color: white;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            text-decoration: none;
+            box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .more-btn:hover {
+            background-color: #d35400;
+            transform: scale(1.05);
+        }
+
+
+
+
+
+
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Welcome!</h1>
+        <div class="header-links">
+            <a href="https://github.com/mfejzic" target="_blank">GitHub</a>
+            <span>|</span>
+            <a href="https://www.linkedin.com/in/mfejzic/" target="_blank">LinkedIn</a>
+        </div>
+        
+    </header>
+    <a href="links/more.html" class="more-btn">More <i class="fas fa-arrow-right"></i></a>
+
+      
+
+
+    <div class="button-container">
+
+                <!-- AWS Column -->
+        <div class="button-column">
+            <a href="links/aws.html" class="btn aws-btn">AWS</a>
+            <div class="line"></div>
+            <div class="info-box">
+                <h3>Secure EC2 Web Infrastructure</h3>
+                <p>Highly available EC2 setup with private instances, bastion host, ALB routing, and SSL for secure, resilient deployment.</p>
+                <a href="links/ec2infra.html">Read more</a>
+            </div>
+
+
+            <div class="line"></div> <!-- New Bar Line under the Info Box -->
+            <div class="info-box">
+                <h3>Static Serverless Hosting with CloudFront</h3>
+                <p>Serves static website files via S3 and CloudFront with health-based routing and TLS encryption.</p>
+                <a href="links/cloudfront.html">Read more</a>
+            </div>
+
+            <div class="line"></div> <!-- New Bar Line under the Info Box -->
+            <div class="info-box">
+                <h3>Hybrid EKS Deployment</h3>
+                <p>Runs Kubernetes pods on both EC2 and Fargate for a mix of serverless and non-serverless containers, with built-in monitoring using Prometheus and Grafana.</p>
+                <a href="links/eks_hybrid.html">Read more</a>
+            </div>
+
+            <div class="line"></div> <!-- New Bar Line under the Info Box -->
+            <div class="info-box">
+                <h3>Serverless Container Deployement</h3>
+                <p>Uses Fargate to host a dynamic website, scales based on traffic demands. Infra  is multi-region and resilient with automatic failover.</p>
+                <a href="links/fargate_container.html">Read more</a>
+            </div>
+        </div>
+
+        <!-- Azure Column -->
+        <div class="button-column">
+            <a href="links/azure.html" class="btn azure-btn">Azure</a>
+            <div class="line"></div>
+            <div class="info-box">
+                <h3>Multi-Region Static Website with CDN and Failover</h3>
+                <p>Deploys static web across 2 regions with CDN, automatic failover, and monitoring via route 53.</p>
+                <a href="links/cdn_azure.html">Read more</a>
+            </div>
+
+
+            <div class="line"></div> <!-- New Bar Line under the Info Box -->
+            <div class="info-box">
+                <h3>Secure Virtual Machine Based Infrastructure</h3>
+                <p>This 3 tier network contains a bastion, virtual machine scale set for processing, and a database for storage.</p>
+                <a href="aws_project.html">Read more</a>
+            </div>
+
+            <div class="line"></div> <!-- New Bar Line under the Info Box -->
+            <div class="info-box">
+                <h3>serverless</h3>
+                <p>Deployable eCommerce stack using EC2, RDS, and S3 with Terraform.</p>
+                <a href="aws_project.html">Read more</a>
+            </div>
+
+            <div class="line"></div> <!-- New Bar Line under the Info Box -->
+            <div class="info-box">
+                <h3>hybrid</h3>
+                <p>Deployable eCommerce stack using EC2, RDS, and S3 with Terraform.</p>
+                <p>Deployable eCommerce stack using EC2, RDS, and S3 with Terraform.</p>
+
+                <a href="aws_project.html">Read more</a>
+            </div>
+        </div>
+
+    
+        <!-- Connector Bar -->
+        <div class="connector"></div>
+    
+        <!-- Top Buttons -->
+        <div class="top-buttons">
+            <button class="top-btn">
+                <img src="svg/serlessicon.svg" alt="Serverless Icon">  
+                serverless
+            </button>
+            <button class="top-btn">
+                <img src="svg/hybridicon.svg" alt="Hybrid Icon">  
+                hybrid
+            </button>
+            <button class="top-btn">
+                <img src="svg/computeicon.svg" alt="Compute Icon">  
+                non-serverless
+            </button>
+        </div>
+    
+    </div>
+    
+
+
+</body>
+</html>
+

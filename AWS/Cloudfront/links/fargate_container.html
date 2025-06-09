@@ -1,0 +1,181 @@
+<html>
+
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+  <style>
+
+.home-btn {
+    position: absolute;
+    top: 50px;
+    right: 130px; /* Positioned to the left of the More button */
+    background-color: #2ecc71;
+    color: white;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.home-btn:hover {
+    background-color: #27ae60;
+    transform: scale(1.05);
+}
+
+
+
+    body {
+      margin: 0px;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    header {
+      background-color: #3498db;
+      color: #fff;
+      text-align: center;
+      padding: 60px;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin: 0;
+    }
+
+    .header-links {
+      margin-top: 10px;
+    }
+
+    .header-links a {
+      text-decoration: none;
+      color: #fff;
+      margin: 0 10px;
+      font-weight: bold;
+      transition: color 0.3s;
+    }
+
+    .header-links a:hover {
+      color: #e74c3c;
+    }
+
+    .header-links span {
+      color: #fff;
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .description-container {
+      width: 70%;
+      padding: 20px;
+      border: 7px solid #d8971e;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    h2,
+    h3 {
+      font-size: 20px;
+      margin-top: 0;
+    }
+
+    p {
+      font-size: 16px;
+    }
+
+    .divider {
+      border-top: 1px solid #ccc;
+      margin: 10px 0;
+    }
+
+    .star {
+      color: #FFD700;
+      font-size: 28px;
+    }
+
+    .key-features-list li {
+      margin-left: 40px;
+    }
+
+    .icon {
+      width: 30px;
+      height: auto;
+      margin-right: 10px;
+    }
+
+    .features-container {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .bulletin {
+      width: 48%;
+    }
+
+    .image-below {
+      width: 70%;
+      margin: 20px auto;
+      text-align: center;
+    }
+  </style>
+
+<a href="../home.html" class="home-btn">Home <i class="fas fa-home"></i></a>
+
+</head>
+
+<body>
+
+  <div class="divider"></div>
+
+  <div class="container">
+    <div class="description-container">
+      <h3>Launch type: Serverless | Template: AWS containers | Security: High | Language: HCL</h3>
+      <div class="divider" style="border-top: 4px solid #000;"></div>
+
+      <ul>
+        <h3><i class="fas fa-link"></i> Use Case</h3>
+        <li>Using Fargate to host a dynamic website allows for seamless scaling based on traffic demands, enables cost-efficiency, efficient resource utilization, and removes operational overhead.</li>
+        <li>Fargate can be employed for backend processing of on-demand tasks, such as image or document processing that allows the organization to efficiently scale resources based on variable workloads without the need for managing dedicated servers.</li>
+      </ul>
+
+      <div class="divider"></div>
+
+      <ul>
+        <h3><i class="fas fa-info-circle icon"></i> Description</h3>
+        <li>I created an image in Docker and pushed it to the container registry in AWS to run in a serverless fashion through Fargate.</li>
+        <li>The infrastructure is fully serverless, resilient, highly available and configured to failover to a backup region with zero downtime.</li>
+        <li>I maximized the security by placing the ECS service in private subnets, accessible only through the load balancer. The containerized image stores key details in DynamoDB.</li>
+      </ul>
+
+      <div class="divider"></div>
+
+      <h3><i class="fas fa-hammer"></i> Build Order</h3>
+      <img src="../jpg/farbuild.jpg" alt="Fargate Build Order">
+
+      <div style="text-align: center; margin-top: 20px;">
+        <a href="https://github.com/mfejzic/Fargate/tree/main/Fargate" style="color: #0074a2;">
+          <h3>View this on Github</h3>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="image-below">
+    <a href="https://github.com/mfejzic/Fargate/tree/main/Fargate" target="_blank">
+      <img src="../jpg/serverless.jpg" alt="Fargate Project Screenshot">
+    </a>
+  </div>
+
+  <div class="divider"></div>
+
+</body>
+</html>

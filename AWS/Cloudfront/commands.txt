@@ -1,0 +1,17 @@
+** Create cache invalidation **
+aws cloudfront create-invalidation --distribution-id E2SFVGKBA4HS41  --paths "/index.html" 
+
+** Upload jpg files to s3 **
+aws s3 sync jpg/ s3://host-website-mf37/jpg/
+
+** Upload links, and all other html
+aws s3 sync links/ s3://host-website-mf37/links/
+aws s3 cp home.html s3://host-website-mf37/home.html
+aws s3 sync svg/ s3://host-website-mf37/svg/
+
+
+** Delete all files in s3**
+aws s3 rm s3://host-website-mf37/ --recursive
+
+** CICD **
+to use gitlab cicd, create and name a file .gitlab-ci.yml at the root of your project which should containt configurationf or your cicd.

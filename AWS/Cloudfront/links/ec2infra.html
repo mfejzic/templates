@@ -1,0 +1,184 @@
+<html>
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+  <style>
+
+.home-btn {
+    position: absolute;
+    top: 50px;
+    right: 130px; /* Positioned to the left of the More button */
+    background-color: #2ecc71;
+    color: white;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.home-btn:hover {
+    background-color: #27ae60;
+    transform: scale(1.05);
+}
+
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    header {
+      background-color: #3498db;
+      color: #fff;
+      text-align: center;
+      padding: 60px;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin: 0;
+    }
+
+    .header-links {
+      margin-top: 10px;
+    }
+
+    .header-links a {
+      text-decoration: none;
+      color: #fff;
+      margin: 0 10px;
+      font-weight: bold;
+      transition: color 0.3s;
+    }
+
+    .header-links a:hover {
+      color: #e74c3c;
+    }
+
+    .header-links span {
+      color: #fff;
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .description-container {
+      width: 70%;
+      padding: 20px;
+      border: 7px solid #d8971e;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    h2, h3 {
+      font-size: 20px;
+      margin-top: 0;
+    }
+
+    p {
+      font-size: 16px;
+    }
+
+    .divider {
+      border-top: 1px solid #ccc;
+      margin: 10px 0;
+    }
+
+    .star {
+      color: #FFD700;
+      font-size: 28px;
+    }
+
+    .key-features-list li {
+      margin-left: 40px;
+    }
+
+    .icon {
+      width: 30px;
+      margin-right: 10px;
+    }
+
+    .features-container {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .bulletin {
+      width: 48%;
+    }
+
+    .image-below {
+      width: 70%;
+      margin: 20px auto;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+    <a href="../home.html" class="home-btn">Home <i class="fas fa-home"></i></a>
+
+  <div class="divider"></div>
+
+  <div class="container">
+    <div class="description-container">
+      <h3>Launch type: Non-serverless | Template: EC2 | Security: High | Language: HCL</h3>
+      <div class="divider" style="border-top: 4px solid #000;"></div>
+
+      <div class="features-container">
+        <div class="bulletin">
+          <ul><span class="star">&#9733;</span> Key Features
+            <li>Multi-region deployment</li>
+            <li>Highly available</li>
+            <li>Fault-tolerant</li>
+          </ul>
+        </div>
+        <div class="bulletin">
+          <ul class="key-features-list"><span class="star">&#9733;</span> Security Features
+            <li>Bastion hosts</li>
+            <li>Private subnets</li>
+            <li>Amazon managed SSL certificate</li>
+          </ul>
+        </div>
+      </div>
+
+      <ul>
+        <h3><i class="fas fa-info-circle icon"></i> Description</h3>
+        <li>I've built a resilient infrastructure with Route 53 routing to an Application Load Balancer, securely directing traffic to private instances hosting a dynamic website.</li>
+        <li>I placed a bastion host in the public subnet enabling secure SSH access to the private instances.</li>
+        <li>The infrastructure is designed for multi-region, multi-Availability Zone deployment and aimed at ensuring resiliency and minimizing downtime.</li>
+      </ul>
+
+      <div class="divider"></div>
+
+      <h3><i class="fas fa-hammer"></i> Build Order</h3>
+      <img src="../jpg/ec2build.jpg" alt="EC2 Build Diagram">
+
+      <div style="text-align: center; margin-top: 20px;">
+        <a href="https://github.com/mfejzic/Cloudnet/tree/main/Cloudnet" style="color: #0074a2;">
+          <h3>View this on Github</h3>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="image-below">
+    <a href="https://github.com/Muhazic/Cloudnet/tree/main/Cloudnet" target="_blank">
+      <img src="../jpg/cloudnetOF.jpg" alt="Cloudnet Project Overview">
+    </a>
+  </div>
+
+  <div class="divider"></div>
+
+</body>
+</html>

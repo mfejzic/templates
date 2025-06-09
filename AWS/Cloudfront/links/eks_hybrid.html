@@ -1,0 +1,170 @@
+<html>
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+  <style>
+
+.home-btn {
+    position: absolute;
+    top: 50px;
+    right: 130px; /* Positioned to the left of the More button */
+    background-color: #2ecc71;
+    color: white;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.home-btn:hover {
+    background-color: #27ae60;
+    transform: scale(1.05);
+}
+
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    header {
+      background-color: #3498db;
+      color: #fff;
+      text-align: center;
+      padding: 60px;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin: 0;
+    }
+
+    .header-links {
+      margin-top: 10px;
+    }
+
+    .header-links a {
+      text-decoration: none;
+      color: #fff;
+      margin: 0 10px;
+      font-weight: bold;
+      transition: color 0.3s;
+    }
+
+    .header-links a:hover {
+      color: #e74c3c;
+    }
+
+    .header-links span {
+      color: #fff;
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .description-container {
+      width: 70%;
+      padding: 20px;
+      border: 7px solid #d8971e;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    h2, h3 {
+      font-size: 20px;
+      margin-top: 0;
+    }
+
+    p {
+      font-size: 16px;
+    }
+
+    .divider {
+      border-top: 1px solid #ccc;
+      margin: 10px 0;
+    }
+
+    .star {
+      color: #FFD700;
+      font-size: 28px;
+    }
+
+    .key-features-list li {
+      margin-left: 40px;
+    }
+
+    .icon {
+      width: 30px;
+      margin-right: 10px;
+    }
+
+    .features-container {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .bulletin {
+      width: 48%;
+    }
+
+    .image-below {
+      width: 70%;
+      margin: 20px auto;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+    <a href="../home.html" class="home-btn">Home <i class="fas fa-home"></i></a>
+
+
+
+  <div class="divider"></div>
+
+  <div class="container">
+    <div class="description-container">
+      <h3>Launch type: Hybrid | Template: Kubernetes | Security: High | Language: HCL</h3>
+      <div class="divider" style="border-top: 4px solid #000;"></div>
+
+      <ul>
+        <h3><i class="fas fa-info-circle icon"></i> Description</h3>
+        <li>I created an image in Docker and pushed it to the ECR. The image is intended to host a dynamic website on managed Kubernetes containers.</li>
+        <li>The region has two availability zones: one running serverless EKS containers, the other running EC2-based containers.</li>
+        <li>The EC2 containers are configured with a bastion host that allows SSH access into the container VMs for troubleshooting.</li>
+        <li>YAML files configure Grafana and Prometheus to monitor/scrape my containers and provide performance and health metrics.</li>
+      </ul>
+
+      <div class="divider"></div>
+
+      <h3><i class="fas fa-hammer"></i> Build Order</h3>
+      <img src="../jpg/kubuild.jpg" alt="Kubernetes Build Order">
+
+      <div style="text-align: center; margin-top: 20px;">
+        <a href="https://github.com/mfejzic/kubernetes/tree/main/kubernetes" style="color: #0074a2;">
+          <h3>View this on Github</h3>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="image-below">
+    <a href="https://github.com/mfejzic/kubernetes/tree/main/kubernetes" target="_blank">
+      <img src="../jpg/eks.jpg" alt="Kubernetes Hybrid Project">
+    </a>
+  </div>
+
+  <div class="divider"></div>
+
+</body>
+</html>
