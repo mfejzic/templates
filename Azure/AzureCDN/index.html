@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+
+    <style>
+        body {
+            margin: 0px;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+                    header {
+                background-color: #3498db;
+                color: #fff;
+                text-align: center;
+                padding: 60px;
+            }
+
+            h1 {
+                font-size: 32px;
+                margin: 0;
+            }
+
+            .header-links {
+                margin-top: 10px;
+            }
+
+            .header-links a {
+                text-decoration: none;
+                color: #fff;
+                margin: 0 10px;
+                font-weight: bold;
+                transition: color 0.3s;
+            }
+
+            .header-links a:hover {
+                color: #e74c3c;
+            }
+
+            .header-links span {
+                color: #fff;
+            }
+            
+
+        .container {
+            display: flex;
+            align-items: center;
+            margin: 0;
+        }
+
+        .image-container {
+            flex: 1;
+            text-align: right;
+            margin-right: 50px;
+            
+        }
+        
+        .resume-container {
+            flex: 1.2;
+            text-align: center;
+            margin-right: 50px;
+        }
+
+        img {
+            max-width: 100%;
+            max-height: 1300px; /* Default max-height */
+        }
+
+        .description-container {
+            flex: .9;
+            padding: 20px;
+            border: 7px solid #d8971e;
+        
+        }
+
+        .javacode-container {
+            flex: .75;
+            padding: 20px;
+            border: 7px solid #8f1111;
+        }
+    
+        .javagif-container {
+            flex: .84;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 20px;
+            margin-top: 0;
+            list-style: disc; /* Add bullet points */
+            padding-left: 20px; /* Adjust the left padding for bullet points */
+        }
+
+        p {
+            font-size: 16px;
+        }
+
+        .divider {
+            border-top: 1px solid #ccc;
+            margin: 10px 0;
+        }
+        .star {
+            color: #FFD700; /* Set the color of the star (you can adjust this) */
+            margin-right: 0px; /* Adjust the margin to control spacing between the star and text */
+            font-size: 28px;
+        }
+        .key-features-list li {
+            margin-left: 40px; /* Adjust the margin to indent the list items */
+        }
+        .icon {
+            width: 30px; /* Adjust the width of the icon */
+            height: auto; /* Maintain the aspect ratio */
+            margin-right: 10px; /* Adjust the margin to control spacing between the icon and text */
+        }
+        .features-container {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .bulletin {
+            width: 48%; /* Adjust the width of each bulletin to leave some space between them */
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Welcome!</h1>
+        <div class="header-links">
+            <a href="https://github.com/mfejzic" target="_blank">GitHub</a>
+            <span>|</span>
+            <a href="https://www.linkedin.com/in/mfejzic/" target="_blank">LinkedIn</a>
+        </div>
+    </header>
+    <div class="divider"></div>
+    <div class="container">
+        <div class="description-container">
+            <a href="https://github.com/Muhazic/Cloudnet/tree/main/Cloudnet" target="_blank"></a> 
+            
+            <h3> Launch type: Non-serverless  |  Template: EC2  |  Security: High  |  Language: HCL </h3> <div class="divider", style="border-top: 4px solid #000;"></div>
+            <p> 
+                <div class="features-container">
+                    <div class="bulletin">
+                <ul> <span class="star">&#9733;</span>Key Features
+                    <li> Multi-region deployment</li>
+                    <li> Highly available</li>
+                    <li> Fault-tolerant</li><div class="divider"></div>
+                </ul>
+                    </div>
+                    <div class="bulletin"> 
+                        <ul class="key-features-list"> <span class="star">&#9733;</span> Security Features
+                            <li>Bastion hosts</li>
+                            <li>Private subnets</li>
+                            <li>Amazon managed SSL certificate</li> <div class="divider"></div>
+                        </ul>
+                    </div>
+                </div>
+                <ul> <h3><i class="fas fa-info-circle icon"></i> Description</h3>
+                    <li> I've built a resilient infrastructure with Route 53 routing to an Application Load Balancer, securely directing traffic to private instances hosting a dynamic website. </li>
+                    <li>I placed a bastion host in the public subnet enabling secure SSH access to the private instances. </li>
+                    <li>The infrastructure is designed for multi-region, multi-Availability Zone deployment and aimed at ensuring resiliency and minimizing downtime.</li> <div class="divider"></div>
+                </ul>  <h3><i class="fas fa-hammer"></i> Build Order</h3>
+                <ul> 
+                    <img src="ec2build.jpg">
+                </ul>
+            </p>
+            <div style="text-align: center;">
+                <a href="https://github.com/mfejzic/Cloudnet/tree/main/Cloudnet" style="color: #0074a2;">
+                    <h3>View this on Github</h3>
+                </a>
+        </div>
+        </div>
+        <div class="image-container">
+            <a href="https://github.com/Muhazic/Cloudnet/tree/main/Cloudnet" target="_blank">
+                <img src="cloudnetOF.jpg" alt="Project 1">
+            </a>
+        </div>
+    </div>
+    <div class="divider"></div>
+    <div class="container">
+        <div class="description-container">
+            <h3>  Launch type: Serverless  |  Template: Cloudfront  |  Security: Low  |  Language: HCL</h3><div class="divider", style="border-top: 4px solid #000;"></div>
+            <p>
+                <ul> <h3><i class="fas fa-info-circle icon"></i> Description</h3>
+                    <li> S3 bucket will share static website files with server-side encryption enables for all objects. Versioning is automatically enabled to prevent accidental deletion. </li>
+                    <li> Route 53 creates primary and secondary records to route traffic based on health checks. </li>
+                    <li> Cloudfront creates a distribution to serve static web pages from the s3 bucket. Configured with a TLS Certificate from AWS.</li> <div class="divider"></div>
+                </ul> <h3><i class="fas fa-hammer"></i> Build Order</h3>
+                <ul> 
+                    <img src="cfbuild.jpg">
+                </ul>
+            </p>
+            <div style="text-align: center;">
+                <a href=https://github.com/mfejzic/Cloudfront" style="color: #0074a2;">
+                    <h3>View this on Github</h3>
+                </a>
+            </div>
+        </div>
+        <div class="image-container">
+            <a href="https://github.com/mfejzic/Cloudfront" target="_blank">
+                <img src="cloudfront.jpg" alt="Project 1">
+            </a>
+        </div>
+    </div>
+    <div class="divider"></div>
+    <div class="container">
+        <div class="description-container">
+            <h3>  Launch type: Hybrid  |  Template: Kubernetes  |  Security: High  |  Language: HCL</h3><div class="divider", style="border-top: 4px solid #000;"></div>
+            <p>
+                <ul> <h3><i class="fas fa-info-circle icon"></i> Description</h3>
+                    <li> I created an image in docker and pushed it to the ECR. The image is intended to host a dynamic website on managed kubernetes containers.</li>
+                    <li> The region has two availability zones available, one that runs serverless eks containers, and one that runs non-serverless containers on ec2.  </li>
+                    <li> The EC2 containers are configured with a bastion host that allows SSH access into the containers virtual machines for troubleshooting purposes..</li>
+                    <li> YAML files configure Grafana and Promethues to monitor/scrape my containers and provide me with performance and health metrics.</li><div class="divider"></div>                    
+                </ul><h3><i class="fas fa-hammer"></i> Build Order</h3>
+                <ul> 
+                    <img src="kubuild.jpg">
+                </ul>
+
+            </p>
+            <div style="text-align: center;">
+                <a href="https://github.com/mfejzic/kubernetes/tree/main/kubernetes" style="color: #0074a2;">
+                    <h3>View this on Github</h3>
+                </a>
+            </div>
+        </div>
+        <div class="image-container">
+            <a href="https://github.com/mfejzic/kubernetes/tree/main/kubernetes" target="_blank">
+                <img src="eks.jpg" alt="Project 1">
+            </a>
+        </div>
+    </div>
+    <div class="divider"></div>
+    <div class="container">
+        <div class="description-container">
+            <h3>  Launch type: Serverless  |  Template: AWS containers  |  Security: High  |  Language: HCL </h3><div class="divider", style="border-top: 4px solid #000;"></div>
+            <p>
+                <ul> <h3><i class="fas fa-link"></i> Use Case</h3>
+                    <li> Using Fargate to host a dynamic website allows for seamless scaling based on traffic demands, enables cost-efficiency, efficient resource utilization, and removes operational overhead. </li>
+                    <li> Fargate can be employed for backend processing of on-demand tasks, such as image or document processing that allows the organization to efficiently scale resources based on variable workloads without the need for managing dedicated servers. </li> <div class="divider"></div>
+                </ul>
+
+                <ul> <h3><i class="fas fa-info-circle icon"></i> Description</h3>
+                    <li> I created an image in docker and pushed it to the container registry in AWS in order to run it in a serverless fashion through fargate. </li>
+                    <li> The infrastructure is fuly serverless, resilient, highly available and configured to failover to a backup region with zero downtime.</li>
+                    <li> I maximized the security by placing the ECS service in private subnets which can only be accessed through the load balancer. The image runs on a container and keeps its important details in a Dynamo database. </li> <div class="divider"></div>
+                </ul> <h3><i class="fas fa-hammer"></i> Build Order</h3>
+                <ul> 
+                    <img src="farbuild.jpg">
+                </ul>
+            </p>
+            <div style="text-align: center;">
+                <a href="https://github.com/mfejzic/Fargate/tree/main/Fargate" style="color: #0074a2;">
+                    <h3>View this on Github</h3>
+                </a>
+            </div>
+        </div>
+        <div class="image-container">
+            <a href="https://github.com/mfejzic/Fargate/tree/main/Fargate" target="_blank"> 
+                <img src="serverless.jpg" alt="Project 1">
+            </a>
+        </div>
+    </div>
+    <div class="divider"></div>
+    <div class="container">
+        <div class ="javacode-container">
+            <h2>Tower of Hanoi - Java Project </h2><div class="divider", style="border-top: 4px solid #000;"></div>
+            <p>
+                <ul>
+                    <li>User Input Validation:
+                        It continuously accepts user input for selecting the starting and target towers.The code validates user input to ensure they select valid tower options and that the target tower is different from the starting tower.</li><div class="divider"></div>
+                    <li>Tower Movement and Game Logic:
+                        It checks if the user can move a disk from the starting tower to the target tower based on the game rules. If a move is valid, it updates the tower configuration and counts the number of moves and provides feedback whether successful or not.</li><div class="divider"></div>
+                    <li>Winning Condition:
+                        The code checks if the user has successfully completed the Tower of Hanoi puzzle by moving all disks to another tower. If the win condition is met, it displays the total number of moves and ends the game.</li><div class="divider"></div>
+                    <li>Display of Tower State:
+                        The code continuously displays the current state of the three towers, showing the arrangement of disks.</li><div class="divider"></div>
+                     <li>Termination:
+                        The game continues to run until the user successfully completes the puzzle, after which it terminates.</li>
+                </ul>
+            </p>
+            <div style="text-align: center;">
+                <a href="https://github.com/mfejzic/Data-Structures/blob/main/GameFinal/RunGame.java"" style="color: #0074a2;">
+                    <h3>View this on Github</h3>
+                </a>
+            </div>
+        </div>
+        <div class="javagif-container">
+            <a href="https://github.com/mfejzic/Data-Structures/blob/main/GameFinal/RunGame.java" target="_blank">
+                <img src="toigif.gif" alt="Project 1">
+            </a>
+        </div>
+    </div>
+    <div class="divider"></div>
+    <div class="container">
+        <div class="resume-container">
+            <img src="mfejziccloudresume.jpg" alt="Image 5">
+        </div>
+    </div>
+    <div class="divider"></div>
+    <!-- Repeat the above structure for more images and descriptions -->
+</body>
+</html>
