@@ -1,0 +1,19 @@
+## add service principal (application) ##
+     #go to entra -> manage -> app registrations -> new registrations -> add
+     # go to subscriptions -> IAM -> add role assignment -> add reader role and assign your serivce principal ex: terraform - allows tf to use azure portal
+
+
+
+// 1. add custom domain to azure domain names, create txt record in route53 and add the value from azure domain names
+// 2. manually change access type to blob on each $web container
+// 3. turn on tls cert manually in the cdn primary endpoint - takes up to 30 mins to activate
+
+** ubuntu commands **
+---------dig www.fejzic37.com CNAME---------
+* queries DNS for the cname record associated with the domain - should return primary endpoint first
+
+----------curl -I https://mf37east.z20.web.core.windows.net/index.html--------
+* checks status and config of web resource - verifies resource(blob files) are accessible, or if returns 404 error
+
+curl -I https://primary-endpoint-xxxreplacexxx.azureedge.net
+* checks availability of CDN endpoint
