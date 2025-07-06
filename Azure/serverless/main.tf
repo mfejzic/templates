@@ -1,4 +1,5 @@
 
+
 locals {
   
   # this is a list, use count
@@ -30,7 +31,7 @@ locals {
   }
 }
 
-
+# uses existing resource group
 data "azurerm_resource_group" "main" {
   name = "serverless-group"
 }
@@ -69,17 +70,17 @@ resource "azurerm_subnet" "private" {
   resource_group_name  = data.azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.vnet.name
 
-  address_prefixes     = ["10.0.4.0/23"]                            # Make sure this block spans IPs usable across AZs
+  address_prefixes     = ["10.0.14.0/23"]                            # Make sure this block spans IPs usable across AZs
 
-  delegation {
-    name = "delegation"
-    service_delegation {
-      name = "Microsoft.App/environments"
-      actions = [
-        "Microsoft.Network/virtualNetworks/subnets/action"
-      ]
-    }
-  }
+  # delegation {
+  #   name = "delegation"
+  #   service_delegation {
+  #     name = "Microsoft.App/environments"
+  #     actions = [
+  #       "Microsoft.Network/virtualNetworks/subnets/action"
+  #     ]
+  #   }
+  # }
 }
 
 
@@ -122,23 +123,23 @@ resource "azurerm_nat_gateway_public_ip_association" "nat" {
 #-------------------------------- route tables ------------------------------------#
 
 # route from private subnet
-resource "azurerm_route_table" "route" {
-  name                = "private-route"
-  location            = data.azurerm_resource_group.main.location
-  resource_group_name = data.azurerm_resource_group.main.name
+# resource "azurerm_route_table" "route" {
+#   name                = "private-route"
+#   location            = data.azurerm_resource_group.main.location
+#   resource_group_name = data.azurerm_resource_group.main.name
 
-  route {
-    name                   = "nat-access"                             // Route to internet via NAT Gateway
-    address_prefix         = "0.0.0.0/0"
-    next_hop_type          = "Internet"                                    // virtual applicance routes traffic to an azure service - requires next_hop_in_ip_address 
-    //next_hop_in_ip_address = azurerm_public_ip.public_ip_nat_zone2.ip_address  //NAT Gateway for internet access - comment this out if using internet
-  }
-}
+#   route {
+#     name                   = "nat-access"                             // Route to internet via NAT Gateway
+#     address_prefix         = "0.0.0.0/0"
+#     next_hop_type          = "Internet"                                    // virtual applicance routes traffic to an azure service - requires next_hop_in_ip_address 
+#     //next_hop_in_ip_address = azurerm_public_ip.public_ip_nat_zone2.ip_address  //NAT Gateway for internet access - comment this out if using internet
+#   }
+# }
 
-resource "azurerm_subnet_route_table_association" "route" {
-  subnet_id      = azurerm_subnet.private.id
-  route_table_id = azurerm_route_table.route.id
-}
+# resource "azurerm_subnet_route_table_association" "route" {
+#   subnet_id      = azurerm_subnet.private.id
+#   route_table_id = azurerm_route_table.route.id
+# }
 
 #-------------------------------- network security groups ------------------------------------#
 
@@ -151,24 +152,61 @@ resource "azurerm_container_app_environment" "env" {
   resource_group_name        = data.azurerm_resource_group.main.name
   log_analytics_workspace_id = azurerm_log_analytics_workspace.logs.id
   infrastructure_subnet_id   = azurerm_subnet.private.id
+
+
+
+  depends_on = [ azurerm_subnet.private ]
 }
 
 resource "azurerm_container_app" "app" {
-  name                         = "app"
+  name                         = "main"
   container_app_environment_id = azurerm_container_app_environment.env.id
   resource_group_name          = data.azurerm_resource_group.main.name
   revision_mode                = "Single"
+  ingress {
+    external_enabled = true
+    target_port = 80
+    traffic_weight {
+     percentage =  100
+     latest_revision = true
+    }
+  }
+
+// container app has its own azure managed identity and needs AcrPull permission to pull image from ACR
+  identity {
+    type = "SystemAssigned"                          // works in conjuction with role assignment block below /// can use system assigned or user assigned
+  }
 
   template {
     container {
-      name   = "examplecontainerapp"
-      image  = "mcr.microsoft.com/k8se/quickstart:latest"
+      name   = "app1"
+      image  = "mf37registry.azurecr.io/flask-cosmos-app:v1"
       cpu    = 0.25
       memory = "0.5Gi"
     }
   }
+
+  registry {
+    server = azurerm_container_registry.acr.login_server
+    username = azurerm_container_registry.acr.admin_username
+    password_secret_name = azurerm_container_registry.acr.name
+  }
+
+  secret {
+    name = azurerm_container_registry.acr.name
+    value = azurerm_container_registry.acr.admin_password
+  }
+
+  depends_on = [ azurerm_container_registry.acr ]
 }
 
+# resource "azurerm_role_assignment" "container_acr_pull" {
+#   principal_id         = azurerm_container_app.app.identity[0].principal_id            // refers to identity type above
+#   role_definition_name = "AcrPull"
+#   scope                = azurerm_container_registry.acr.id
+
+#   depends_on = [ azurerm_container_app.app ]                                     // container_app must be created before the role
+# }
 
 
 #-------------------------------- container registry ------------------------------------#
@@ -178,7 +216,12 @@ resource "azurerm_container_registry" "acr" {
   resource_group_name = data.azurerm_resource_group.main.name
   location            = data.azurerm_resource_group.main.location
   sku                 = "Premium"
-  admin_enabled       = false
+  admin_enabled       = true
+
+  identity {
+    type = "SystemAssigned"
+  }
+  
 
   # georeplications {
   #   location                = "West US"
