@@ -1,27 +1,37 @@
 # Use official Python base image
 FROM python:3.11-slim
 
-
-# Set environment variables
+# Set environment variables (disable pyc, enable unbuffered output)
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    FLASK_APP=app.py
+    PYTHONUNBUFFERED=1
 
 # Set working directory
 WORKDIR /app
 
-# opy dependencies file first to leverage Docker layer cache
+# Copy dependencies file first to leverage Docker layer cache
 COPY requirements.txt .
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application files, copies everything into container
+# Copy application files (everything in context)
 COPY . .
 
-# Expose port 80 for the Flask app, app will serve traffic on port 80
+# Add Cosmos DB environment variables permanently, key is subject to change
+ENV COSMOS_ENDPOINT=""
+ENV COSMOS_KEY=""        
+ENV COSMOS_DB_NAME=""
+ENV COSMOS_CONTAINER_NAME=""
+
+# Expose port for Flask app
 EXPOSE 80
 
-# Run flask aplication, main cmmand that runs when container starts
+# Set Flask app (no need to repeat FLASK_APP twice)
 ENV FLASK_APP=app.py
+
+# Run Flask application - use this for testing
 CMD ["flask", "run", "--host=0.0.0.0", "--port=80"]
+
+# for prodcution use this one and add gunicorn to requirements.txt
+# CMD ["gunicorn", "-b", "0.0.0.0:80", "app:app"]
+
