@@ -1,5 +1,12 @@
 
 
+##  missing securirty groups
+## do you need route tables? ssh into a container and interact with the internet
+## fix cosmos
+## fix route 53
+## add grafana prometheus
+## fix diagnostics and log workspace
+
 locals {
   
   # this is a list, use count
@@ -144,6 +151,50 @@ resource "azurerm_nat_gateway_public_ip_association" "nat" {
 #-------------------------------- network security groups ------------------------------------#
 
 
+
+
+
+#-------------------------------- key vault ------------------------------------#
+
+data "azurerm_client_config" "current" {}                           // retrieves terraform, local-machine, and user identity, refer to it in the kv access policy
+
+resource "azurerm_key_vault" "kv" {
+  name                        = "kv-mf37"
+  location                    = data.azurerm_resource_group.main.location
+  resource_group_name         = data.azurerm_resource_group.main.name
+  tenant_id                   = data.azurerm_client_config.current.tenant_id
+  sku_name                    = "standard"
+  purge_protection_enabled    = true
+  soft_delete_retention_days  = 7
+
+  access_policy {
+    tenant_id = data.azurerm_client_config.current.tenant_id
+    object_id = data.azurerm_client_config.current.object_id
+
+    secret_permissions = [
+      "Set", "Get", "List", "Delete", "Recover"                                           // recover bring back secrets that were soft deleted
+    ]
+  }
+}
+
+resource "azurerm_key_vault_secret" "cosmos_key" {
+  name         = "cosmos-key"
+  value        = azurerm_cosmosdb_account.account.primary_key
+  key_vault_id = azurerm_key_vault.kv.id
+
+  depends_on = [azurerm_cosmosdb_account.account]
+}
+
+
+resource "azurerm_key_vault_access_policy" "container_app_policy" {
+  key_vault_id = azurerm_key_vault.kv.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = azurerm_container_app.app.identity[0].principal_id
+
+  secret_permissions = ["Get", "List", "Recover"]                                                 // recover bring back secrets that were soft deleted
+}
+
+
 #-------------------------------- container environment ------------------------------------#
 
 resource "azurerm_container_app_environment" "env" {
@@ -153,8 +204,6 @@ resource "azurerm_container_app_environment" "env" {
   log_analytics_workspace_id = azurerm_log_analytics_workspace.logs.id
   infrastructure_subnet_id   = azurerm_subnet.private.id
 
-
-
   depends_on = [ azurerm_subnet.private ]
 }
 
@@ -163,27 +212,85 @@ resource "azurerm_container_app" "app" {
   container_app_environment_id = azurerm_container_app_environment.env.id
   resource_group_name          = data.azurerm_resource_group.main.name
   revision_mode                = "Single"
+  max_inactive_revisions = 1
+
+  template {
+
+    init_container {
+      name = "initialize"
+      image = "mf37registry.azurecr.io/flask-cosmos-app:latest"
+      cpu = 0.25
+      memory = "0.5Gi"
+      command = ["python", "init_db.py"]
+
+      env {
+        name  = "COSMOS_ENDPOINT"
+        value = azurerm_cosmosdb_account.account.endpoint
+      }
+
+      env {
+        name  = "COSMOS_KEY"
+        secret_name = "cosmos-key"
+      }
+
+      env {
+        name  = "COSMOS_DB_NAME"
+        value = "tfex-cosmos-sql-db"
+      }
+
+      env {
+        name  = "COSMOS_CONTAINER_NAME"
+        value = "messages"
+      }
+    }
+    
+    container {
+      name   = "app1"
+      image  = "mf37registry.azurecr.io/flask-cosmos-app:latest"
+      cpu    = 0.25
+      memory = "0.5Gi"
+      
+      env {
+        name  = "COSMOS_ENDPOINT"
+        value = azurerm_cosmosdb_account.account.endpoint
+      }
+
+      env {
+        name  = "COSMOS_KEY"
+        secret_name = "cosmos-key"
+      }
+
+      env {
+        name  = "COSMOS_DB_NAME"
+        value = "tfex-cosmos-sql-db"
+      }
+
+      env {
+        name  = "COSMOS_CONTAINER_NAME"
+        value = "messages"
+      }
+    }
+  }
+
+  secret {
+    name  = "cosmos-key"
+    key_vault_secret_id = azurerm_key_vault_secret.cosmos_key.id
+    identity = "System"
+  }
+
   ingress {
     external_enabled = true
     target_port = 80
-    traffic_weight {
+    
+    traffic_weight {                                                               // you can specify revisions here and direct them percentage of the traffic
      percentage =  100
      latest_revision = true
     }
   }
 
-// container app has its own azure managed identity and needs AcrPull permission to pull image from ACR
+  // container app has its own azure managed identity and needs AcrPull permission to pull image from ACR
   identity {
     type = "SystemAssigned"                          // works in conjuction with role assignment block below /// can use system assigned or user assigned
-  }
-
-  template {
-    container {
-      name   = "app1"
-      image  = "mf37registry.azurecr.io/flask-cosmos-app:v1"
-      cpu    = 0.25
-      memory = "0.5Gi"
-    }
   }
 
   registry {
@@ -197,7 +304,7 @@ resource "azurerm_container_app" "app" {
     value = azurerm_container_registry.acr.admin_password
   }
 
-  depends_on = [ azurerm_container_registry.acr ]
+  depends_on = [ azurerm_container_registry.acr, null_resource.docker_push ]
 }
 
 # resource "azurerm_role_assignment" "container_acr_pull" {
@@ -209,26 +316,41 @@ resource "azurerm_container_app" "app" {
 # }
 
 
+
 #-------------------------------- container registry ------------------------------------#
 
 resource "azurerm_container_registry" "acr" {
   name                = "mf37registry"
   resource_group_name = data.azurerm_resource_group.main.name
   location            = data.azurerm_resource_group.main.location
-  sku                 = "Premium"
+  sku                 = "Basic"
   admin_enabled       = true
 
-  identity {
-    type = "SystemAssigned"
-  }
+  # identity {
+  #   type = "SystemAssigned"
+  # }
   
-
   # georeplications {
   #   location                = "West US"
   #   zone_redundancy_enabled = true
   #   tags                    = {}
   # }
 }
+
+data "azurerm_container_registry" "acr" {                                         // retrieves metadeta like login_server, admin username and password
+  name                = azurerm_container_registry.acr.name
+  resource_group_name = data.azurerm_resource_group.main.name
+}
+
+// this will push the image into acr before creating the container app - container app will pull image from acr after
+resource "null_resource" "docker_push" {                                          //refers to ps1 script to push image
+  provisioner "local-exec" {
+    command = "powershell.exe -ExecutionPolicy Bypass -File ./docker-push.ps1"
+  }
+
+  depends_on = [azurerm_container_registry.acr]
+}
+
 
 #-------------------------------- cosmos ------------------------------------#
 
@@ -298,4 +420,19 @@ resource "azurerm_log_analytics_workspace" "logs" {
   retention_in_days   = 30
 }
 
+#     ----- diagnostics -----     #
+resource "azurerm_monitor_diagnostic_setting" "nat_diag" {
+  name               = "nat-logs"
+  target_resource_id = azurerm_nat_gateway.nat.id
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
+
+
+  metric {
+    category = "AllMetrics"
+    enabled  = true
+  }
+}
+
+
 #-------------------------------- route 53 ------------------------------------#
+
