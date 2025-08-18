@@ -1,0 +1,53 @@
+### copy  private key (.pem) key to bastion ###
+    scp -i bastionKP.pem  bastionKP.pem ec2-user@3.87.55.190:~/bastionKP.pem 
+
+### copy  public key (.pem) key to bastion ###
+    scp -i C:\Users\muhaz\Terraform\aws\templates\redhat\bastionKP.pem bastionKP.pem.pub ec2-user@3.87.55.190:~/bastionKP.pem.pub
+
+### ssh into bastion ###
+    ssh -i bastionKP.pem ec2-user@3.87.55.190
+
+### set correct permissions on bastion ###
+    chmod 400 bastionKP.pem
+
+### from inside the bastion instance, copy the public key into the redhat instance ###
+    scp -i bastionKP.pem bastionKP.pem.pub ec2-user@10.0.3.145:~/bastionKP.pem.pub
+
+### ssh into the redhat instance (private) ###
+    ssh -i bastionKP.pem ec2-user@10.0.3.145
+
+### from inside the redhat instance, enter these commands to permission ###
+    mkdir -p ~/.ssh
+    cat ~/bastionKP.pem.pub >> ~/.ssh/authorized_keys
+    chmod 600 ~/.ssh/authorized_keys
+    chmod 700 ~/.ssh
+
+### copy .war from local to bastion  ###
+    scp -i C:\Users\muhaz\Terraform\aws\templates\redhat\bastionKP.pem C:\Users\muhaz\Terraform\aws\templates\redhat\message-board\target\message-board-1.0-SNAPSHOT.war ec2-user@3.87.55.190:~/message-board.war
+
+### copy .war from bastion to redhat  - make sure bastion has both public and private keys innit###
+    scp -i bastionKP.pem ~/message-board.war ec2-user@10.0.3.145:~/message-board.war
+
+
+
+
+### manually create schema in postgres ###
+    psql -h my-postgres-db.cguvgyikspim.us-east-1.rds.amazonaws.com -U adminuser -d main -c "CREATE TABLE IF NOT EXISTS messages (id SERIAL PRIMARY KE
+Y, message TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+
+
+
+### test conenction to postgres, from redhat ###
+    #--- install postgress in redhgat first -#
+        sudo yum install -y postgresql
+
+    #--- connect to it (test connection)-#
+        psql -h my-postgres-db.cguvgyikspim.us-east-1.rds.amazonaws.com -U adminuser -d main
+
+
+### start and enable tomcat ###
+    sudo systemctl start tomcat
+    sudo systemctl enable tomcat
+
+### start and enable tomcat ###
+    sudo systemctl status tomcat
