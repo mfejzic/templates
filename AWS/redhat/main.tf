@@ -17,9 +17,17 @@ data "aws_availability_zones" "available" {
 }
 
 # Create public/private subnets
+
+///public subents
 resource "aws_subnet" "public_subnet" {
   vpc_id                  = aws_vpc.vpc.id
   cidr_block              = var.public_subnet_cidr
+  map_public_ip_on_launch = true
+}
+
+resource "aws_subnet" "public_subnet2" {
+  vpc_id                  = aws_vpc.vpc.id
+  cidr_block              = var.public_subnet_cidr2
   map_public_ip_on_launch = true
 }
 
@@ -53,6 +61,15 @@ resource "aws_nat_gateway" "nat_gateway" {
   subnet_id     = aws_subnet.public_subnet.id
 }
 
+resource "aws_eip" "nat_eip2" {
+  domain = "vpc"
+}
+
+resource "aws_nat_gateway" "nat_gateway2" {
+  allocation_id = aws_eip.nat_eip2.id
+  subnet_id     = aws_subnet.public_subnet2.id
+}
+
 #----------------------------------- route tables ------------------------------------#
 
 # public route table
@@ -64,11 +81,25 @@ resource "aws_route_table" "public" {
     gateway_id = aws_internet_gateway.internet_gateway.id
   }
 }
-
 # this blocks associates public subnet to route table
 resource "aws_route_table_association" "public" {
   subnet_id      = aws_subnet.public_subnet.id
   route_table_id = aws_route_table.public.id
+}
+
+// public
+resource "aws_route_table" "public2" {
+  vpc_id = aws_vpc.vpc.id
+
+  route {
+    cidr_block = var.allow_all_cidr
+    gateway_id = aws_internet_gateway.internet_gateway.id
+  }
+}
+# this blocks associates public subnet to route table
+resource "aws_route_table_association" "public2" {
+  subnet_id      = aws_subnet.public_subnet2.id
+  route_table_id = aws_route_table.public2.id
 }
 
 # private route table
@@ -95,7 +126,7 @@ resource "aws_route_table" "private2" {
   }
 }
 
-resource "aws_route_table_association" "private" {
+resource "aws_route_table_association" "private2" {
   subnet_id      = aws_subnet.private_subnet2.id
   route_table_id = aws_route_table.private2.id
 }
@@ -190,6 +221,7 @@ resource "aws_security_group" "sql_sg" {
     to_port         = 5432
     protocol        = "tcp"
     security_groups = [aws_security_group.ec2_sg.id]
+    
   }
   egress {
     description = "Allow all outbound"
@@ -228,22 +260,18 @@ resource "aws_lb" "test" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_sg.id]
-  subnets            = [for subnet in aws_subnet.public : subnet.id]
+  subnets            = [aws_subnet.public_subnet.id, aws_subnet.public_subnet2.id]
 
-  enable_deletion_protection = true
-
-  subnet_mapping {
-    subnet_id = aws_subnet.private_subnet.id
-  }
+  enable_deletion_protection = false
 }
 
 // these two blocks create target groups for https and http
 
-resource "aws_lb_target_group" "https" {
+resource "aws_lb_target_group" "https" {                                         // attached inside the asg block
   name        = "ip-target-group-https"
   port        = 443
   protocol    = "HTTPS"
-  target_type = "ip"
+  target_type = "instance"
   vpc_id      = aws_vpc.vpc.id
 
   health_check {
@@ -257,18 +285,12 @@ resource "aws_lb_target_group" "https" {
     unhealthy_threshold = 3
   }
 }
-// attaches to the launch template
-resource "aws_lb_target_group_attachment" "tg_attachment_https" {
-  target_group_arn = aws_lb_target_group.https.arn
-  target_id        = aws_launch_template.ec2_template.id
-  port             = 443
-}
 
 resource "aws_lb_target_group" "http" {
   name        = "ip-target-group-http"
   port        = 80
   protocol    = "HTTP"
-  target_type = "ip"
+  target_type = "instance"
   vpc_id      = aws_vpc.vpc.id
 
   health_check {
@@ -281,13 +303,6 @@ resource "aws_lb_target_group" "http" {
     healthy_threshold   = 3
     unhealthy_threshold = 3
   }
-}
-
-// attach target group to target
-resource "aws_lb_target_group_attachment" "http" {
-  target_group_arn = aws_lb_target_group.http.arn
-  target_id        = aws_launch_template.ec2_template.id                  // attach to the launch template
-  port             = 80
 }
 
 /// throw ssl content under here
@@ -341,6 +356,7 @@ data "aws_ami" "redhat" {
 resource "aws_launch_template" "ec2_template" {
   name_prefix   = "ec2-template"
   image_id      = data.aws_ami.redhat.id
+  //name = "redhat" add quantifier
   instance_type = "t2.micro"
   key_name      = aws_key_pair.keypair.key_name
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
@@ -358,14 +374,55 @@ resource "aws_autoscaling_group" "ec2_asg" {
   vpc_zone_identifier = [aws_subnet.private_subnet.id]
   min_size = 1
   max_size = 3
+
   launch_template {
     id      = aws_launch_template.ec2_template.id
     version = "$Latest"
   }
+
+  target_group_arns = [
+    aws_lb_target_group.http.arn, 
+    aws_lb_target_group.https.arn
+  ]
 }
 
 #----------------------------------- postgre sql ------------------------------------#
+// best for write heavy workloads
 
+// PostgreSQL RDS instance
+resource "aws_db_instance" "postgres_db" {
+  identifier            = "my-postgres-db"
+  engine                = "postgres"
+  engine_version        = "16.3"                                                            // latest stable version as of today
+  instance_class        = "db.t3.micro"                                                     // use this tiny engine for testing; scale up for prod
+  allocated_storage     = 20                                                                // gigabytes
+  storage_type          = "gp2"
+  username              = "adminuser"                              
+  password              = "password1"  
+  db_name               = "main"  
+  
+  publicly_accessible   = false                                                             // Keep private
+  multi_az              = false                                                              // Single AZ for testing; enable for HA
+  skip_final_snapshot   = true                                                              // Skip snapshot on delete for testing
+
+  db_subnet_group_name  = aws_db_subnet_group.group.name  
+
+  vpc_security_group_ids = [
+    aws_security_group.sql_sg.id
+  ]                                   // must allow entry from redhat instance
+}
+
+# DB Subnet Group for Private Subnets
+resource "aws_db_subnet_group" "group" {
+  name       = "private-db-subnet-group"
+  subnet_ids = [
+    aws_subnet.private_subnet2.id, aws_subnet.private_subnet.id
+  ]                                         // Use your private subnet(s); if multiple, use [aws_subnet.private1.id, aws_subnet.private2.id]
+
+  tags = {
+    Name = "private-db-subnet-group-${var.environment}"
+  }
+}
 
 #----------------------------------- elasticache redis ------------------------------------#
 
