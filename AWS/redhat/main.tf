@@ -392,17 +392,17 @@ resource "aws_key_pair" "keypair" {
 
 #----------------------------------- bastion host ------------------------------------#
 
-# data "aws_ami" "amazon_linux" {
-#   most_recent = true
-#   owners      = ["amazon"]
-#   filter {
-#     name   = "name"
-#     values = ["amzn2-ami-hvm-*-x86_64-gp2"]
-#   }
-# }
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+}
 
 resource "aws_instance" "bastion" {
-  ami           = "ami-0efbfd69b671c7f93"
+  ami           = data.aws_ami.amazon_linux.id
   instance_type = "t2.micro"
   subnet_id     = aws_subnet.public_subnet.id
   key_name      = aws_key_pair.keypair.key_name
@@ -423,7 +423,7 @@ data "aws_ami" "redhat" {
 
 resource "aws_launch_template" "ec2_template" {
   name_prefix   = "ec2-template"
-  image_id      = data.aws_ami.redhat.id
+  image_id      = "ami-0efbfd69b671c7f93"
   //name = "redhat" add quantifier
   instance_type = "t2.micro"
   key_name      = aws_key_pair.keypair.key_name
@@ -491,12 +491,53 @@ resource "aws_db_subnet_group" "group" {
   }
 }
 
-#----------------------------------- elasticache redis ------------------------------------#
 
 
 #----------------------------------- monitoring ------------------------------------#
 
+// cloudwatch
+resource "aws_cloudwatch_metric_alarm" "alarm" {
+  alarm_name                = "alarm1"
+  comparison_operator       = "GreaterThanOrEqualToThreshold"
+  evaluation_periods        = 2
+  metric_name               = "CPUUtilization"
+  namespace                 = "AWS/EC2"
+  period                    = 120
+  statistic                 = "Average"
+  threshold                 = 80
+  alarm_description         = "This metric monitors ec2 cpu utilization"
+  insufficient_data_actions = []
+}
+
+
 
 #----------------------------------- route 53 ------------------------------------#
 
+resource "aws_route53_record" "primary_alias" {
+  zone_id  = var.subdomain_name
+  name     = var.subdomain_name
+  type     = "A"
+
+  alias {
+    name                   = aws_lb.alb.dns_name
+    zone_id                = aws_lb.alb.zone_id
+    evaluate_target_health = true
+  }
+  failover_routing_policy {
+    type = "PRIMARY"
+  }
+  set_identifier  = "primary"
+  health_check_id = aws_route53_health_check.primary.id
+}
+
+resource "aws_route53_health_check" "primary" {
+  fqdn              = var.subdomain_name
+  port              = 443
+  type              = "HTTPS"
+  request_interval  = 30
+  failure_threshold = 3
+  tags = {
+    Name = "primary_health_check"
+  }
+}
 
