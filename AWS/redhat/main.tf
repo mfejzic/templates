@@ -23,12 +23,16 @@ resource "aws_subnet" "public_subnet" {
   vpc_id                  = aws_vpc.vpc.id
   cidr_block              = var.public_subnet_cidr
   map_public_ip_on_launch = true
+  availability_zone = "us-east-1b"
+
 }
 
 resource "aws_subnet" "public_subnet2" {
   vpc_id                  = aws_vpc.vpc.id
   cidr_block              = var.public_subnet_cidr2
   map_public_ip_on_launch = true
+  availability_zone = "us-east-1a"
+
 }
 
 // private subnets
@@ -36,12 +40,15 @@ resource "aws_subnet" "private_subnet" {
   vpc_id            = aws_vpc.vpc.id
   cidr_block        = var.private_subnet_cidr
   map_public_ip_on_launch = false
+  availability_zone = "us-east-1b"
 }
 
 resource "aws_subnet" "private_subnet2" {
   vpc_id            = aws_vpc.vpc.id
   cidr_block        = var.private_subnet_cidr2
   map_public_ip_on_launch = false
+  availability_zone = "us-east-1a"
+
 }
 
 
@@ -161,10 +168,11 @@ resource "aws_security_group" "ec2_sg" {
   description = "Allow HTTP from ALB and SSH from bastion"
   ingress {
     description     = "HTTP from ALB"
-    from_port       = 80
-    to_port         = 80
+    from_port       = 8080
+    to_port         = 8080
     protocol        = "tcp"
-    security_groups = [aws_security_group.alb_sg.id]
+    //security_groups = [aws_security_group.alb_sg.id]
+    cidr_blocks = [aws_subnet.public_subnet.cidr_block, aws_subnet.public_subnet2.cidr_block]
   }
   ingress {
     description     = "SSH from bastion"
@@ -201,13 +209,14 @@ resource "aws_security_group" "alb_sg" {
     protocol    = "tcp"
     cidr_blocks = [var.allow_all_cidr]
   }
-#   egress {
-#     description     = "Outbound to EC2 targets"
-#     from_port       = 80  
-#     to_port         = 80
-#     protocol        = "tcp"
-#     security_groups = [aws_security_group.ec2_sg.id] 
-#   }
+  egress {
+    description     = "Outbound to EC2 targets"
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    //security_groups = [aws_security_group.ec2_sg.id] 
+    cidr_blocks = [aws_subnet.private_subnet.cidr_block]
+  }
 }
 
 # Security group for PostgreSQL
@@ -255,7 +264,7 @@ resource "aws_security_group" "redis_sg" {
 
 #----------------------------------- load balancer & ssl------------------------------------#
 
-resource "aws_lb" "test" {
+resource "aws_lb" "alb" {
   name               = "primary-alb"
   internal           = false
   load_balancer_type = "application"
@@ -265,39 +274,20 @@ resource "aws_lb" "test" {
   enable_deletion_protection = false
 }
 
-// these two blocks create target groups for https and http
-
-resource "aws_lb_target_group" "https" {                                         // attached inside the asg block
-  name        = "ip-target-group-https"
-  port        = 443
-  protocol    = "HTTPS"
-  target_type = "instance"
-  vpc_id      = aws_vpc.vpc.id
-
-  health_check {
-    path                = "/health"
-    port                = 443
-    protocol            = "HTTPS"
-    matcher             = "200"
-    interval            = 30
-    timeout             = 10
-    healthy_threshold   = 3
-    unhealthy_threshold = 3
-  }
-}
+// target group for 8080 - thats where apache is listening
 
 resource "aws_lb_target_group" "http" {
-  name        = "ip-target-group-http"
-  port        = 80
+  name        = "message-board-tg"
+  port        = 8080
   protocol    = "HTTP"
   target_type = "instance"
   vpc_id      = aws_vpc.vpc.id
 
   health_check {
-    path                = "/health"
-    port                = 80
+    path                = "/"
+    port                = "8080"
     protocol            = "HTTP"
-    matcher             = "200"
+    matcher             = "200-399"
     interval            = 30
     timeout             = 10
     healthy_threshold   = 3
@@ -305,7 +295,85 @@ resource "aws_lb_target_group" "http" {
   }
 }
 
-/// throw ssl content under here
+# ----- listeners and rules for port 80 and 443 ----- #
+
+// http-80 listener
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.alb.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.http.arn
+
+    # redirect {
+    #   port        = "443"
+    #   protocol    = "HTTPS"
+    #   status_code = "HTTP_301"
+    # }
+  }
+}
+// rule
+# resource "aws_lb_listener_rule" "http_rule" {
+#   listener_arn = aws_lb_listener.http.arn
+#   priority     = 2
+
+#   action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.http.arn
+#   }
+
+#   condition {
+#     # host_header {
+#     #   values = [aws_lb.alb.dns_name]
+#     # }
+#   }
+# }
+
+// https-443 listener
+# resource "aws_lb_listener" "https" {
+#   load_balancer_arn = aws_lb.alb.arn
+#   port              = 443
+#   protocol          = "HTTPS"
+#   //certificate_arn   = data.aws_acm_certificate.amazon_issued.arn
+#   //ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+
+#   default_action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.http.arn
+#   }
+# }
+# // rule
+# resource "aws_lb_listener_rule" "https_rule" {
+#   listener_arn = aws_lb_listener.https.arn
+#   priority     = 1
+
+#   action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.http.arn
+#   }
+
+#   condition {
+#     # host_header {
+#     #   values = ["www.fejzic37.com"]
+#     # }
+    
+#   }
+# }
+
+# // amazon issued certificate - turn of for production only
+# data "aws_acm_certificate" "amazon_issued" {
+#   domain      = var.subdomain_name
+#   types       = ["AMAZON_ISSUED"]
+#   most_recent = true
+# }
+
+# # Apply certificate to https listener 
+# resource "aws_lb_listener_certificate" "alb_listener_certificate" {
+#   listener_arn    = aws_lb_listener.https.arn
+#   certificate_arn = data.aws_acm_certificate.amazon_issued.arn
+# }
 
 #----------------------------------- key pairs ------------------------------------#
 
@@ -324,17 +392,17 @@ resource "aws_key_pair" "keypair" {
 
 #----------------------------------- bastion host ------------------------------------#
 
-data "aws_ami" "amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
-  }
-}
+# data "aws_ami" "amazon_linux" {
+#   most_recent = true
+#   owners      = ["amazon"]
+#   filter {
+#     name   = "name"
+#     values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+#   }
+# }
 
 resource "aws_instance" "bastion" {
-  ami           = data.aws_ami.amazon_linux.id
+  ami           = "ami-0efbfd69b671c7f93"
   instance_type = "t2.micro"
   subnet_id     = aws_subnet.public_subnet.id
   key_name      = aws_key_pair.keypair.key_name
@@ -381,8 +449,7 @@ resource "aws_autoscaling_group" "ec2_asg" {
   }
 
   target_group_arns = [
-    aws_lb_target_group.http.arn, 
-    aws_lb_target_group.https.arn
+    aws_lb_target_group.http.arn
   ]
 }
 
