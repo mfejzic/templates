@@ -1,0 +1,23 @@
+# run/disable docker compose
+#    docker compose up
+#    docker compose down 
+
+# kill all containers
+#   docker compose down -v
+# rebuild containers
+#   docker compose up --build
+
+# view container logs
+#   docker logs flask-app
+
+# watch logs in real time
+#   docker logs -f flask-app
+
+# read log file
+#  docker exec -it flask-app cat app.log
+# read last lines only
+#  docker exec -it flask-app tail -n 1 app.log
+
+# open a shell into the container
+#  docker exec -it flask-app bash
+
